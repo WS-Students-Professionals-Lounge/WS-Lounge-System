@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/members.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="members-main-wrapper">
+    <div class="members-page-header">
+        <h2 class="page-title">All Members</h2>
+        <span class="current-date-display" id="currentDateDisplay">Friday, April 2, 2026</span>
+    </div>
+
+    <!-- Tab Navigation based on image_fcc278.png -->
+    <div class="members-tabs-container">
+        <div class="tabs-nav">
+            <button class="tab-btn {{ 'active' if active_tab == 'requests' else '' }}" data-tab="requests">Membership Requests</button>
+            <button class="tab-btn {{ 'active' if active_tab == 'list' else '' }}" data-tab="list">Member List</button>
+            <button class="tab-btn {{ 'active' if active_tab == 'deactivated' else '' }}" data-tab="deactivated">Deactivated Accounts</button>
+        </div>
+    </div>
+
+    <!-- Tab Contents -->
+        <div class="tab-content-wrapper">
+
+        <!-- Tab 1: Membership Requests (image_fcc278.png) -->
+        <div id="requests" class="tab-panel {{ 'active' if active_tab == 'requests' else '' }}">
+
+            <div class="panel-header-action">
+                <p class="priority-label">Prioritize by: <strong>Date Requested</strong></p>
+            </div>
+            
+<div class="requests-list" id="requestsList">
+                {# Show only pending requests; prepare data-attributes for client-side use #}
+                {# status may be stored as "pending" or "Pending" depending on seeding/DB casing #}
+                {% set pending_requests = (membership_requests|default([]))|selectattr('status','in',['pending','Pending'])|list %}
+                {% if pending_requests and pending_requests|length > 0 %}
+                    {% for request in pending_requests %}
+<div class="request-card" data-request='{{ request.id }}'>
+                        <div class="request-info">
+                            <h3 class="customer-name">{{ request.user.name }}</h3>
+                            <p class="detail-text">Email: {{ request.user.email }}</p>
+                            <p class="detail-text">Contact Number: {{ request.user.phone or 'N/A' }}</p>
+                        </div>
+                        <div class="request-plan">
+                            <h4 class="column-title">Selected Plan</h4>
+                            <p class="plan-name">{{ request.plan_name }}</p>
+                            <p class="detail-text">Date Requested: {{ request.created_at.strftime('%m/%d/%y - %I:%M %p') }}</p>
+                        </div>
+                        <div class="request-payment">
+                            <h4 class="column-title">Payment Verification</h4>
+                            <button
+                                class="btn-check-receipt"
+                                type="button"
+                                data-receipt-url="{% if request.receipt_image %}{{ url_for('static', filename='uploads/receipts/' ~ request.receipt_image) }}{% else %}{% endif %}"
+                                data-request-name="{{ request.user.name|e }}"
+                            >
+                                Check
+                            </button>
+                        </div>
+                        <div class="request-actions">
+                            <form method="POST" action="{{ url_for('admin.approve_membership', req_id=request.id) }}">
+                                <button type="submit" class="btn-approve">Approve</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin.reject_membership', req_id=request.id) }}">
+                                <button type="submit" class="btn-reject">Reject</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="no-data-placeholder">
+                    <p>No membership requests at the moment.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+
+        <!-- Tab 3: Member List (image_fc6849.png) -->
+        <div id="list" class="tab-panel {{ 'active' if active_tab == 'list' else '' }}">
+            <div class="list-controls">
+                <div class="list-title-group">
+                    <h2 class="section-heading">Official Members</h2>
+                    <p class="section-subtext">Review and manage current members.</p>
+                </div>
+                <div class="list-search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="memberListSearch" placeholder="Search members...">
+                </div>
+            </div>
+
+            <div class="members-card-list">
+                {% set ns = namespace(count=0) %}
+                {% for member in members %}
+                    {% if (member.membership and member.membership.is_active) or (approved_solo_user_ids and member.id in approved_solo_user_ids) %}
+                        {% set ns.count = ns.count + 1 %}
+                <div class="member-list-card" data-searchable="{{ member.name }} {{ member.email }} WS-WLK-{{ member.id }}">
+                    <div class="member-status-icon">
+                        <div class="status-indicator-box active">
+                            <i class="fas fa-file-invoice"></i>
+                            <span>Active</span>
+                        </div>
+                    </div>
+                    <div class="member-main-info">
+                        <h3 class="member-name">{{ member.name }}</h3>
+                        <p class="member-id-tag">WS-WLK-{{ member.id }}</p>
+                        <p class="detail-text">Email: {{ member.email }}</p>
+                        <p class="detail-text">Contact: {{ member.phone or 'N/A' }}</p>
+                    </div>
+                    <div class="member-plan-summary">
+                        <p class="detail-text">Plan: {{ member.membership.plan_name if member.membership else 'No assigned membership' }}</p>
+                        {% if member.membership %}
+                        <p class="detail-text">Status: {{ 'Checked in' if member.membership.is_checked_in else 'Ready to check in' }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="member-card-actions">
+                        <div class="session-action-group">
+                            <button
+                                class="btn-check-in"
+                                type="button"
+                                data-membership-id="{{ member.membership.id if member.membership else '' }}"
+                                data-is-checked-in="{{ 'true' if member.membership and member.membership.is_checked_in else 'false' }}"
+                                {% if not member.membership or not member.membership.is_active %}disabled{% endif %}
+                            >
+                                {{ 'End Session' if member.membership and member.membership.is_checked_in else 'Check In' }}
+                            </button>
+                            <button
+                                class="btn-view-records"
+                                type="button"
+                                data-membership-id="{{ member.membership.id if member.membership else '' }}"
+                            >
+                                View Records
+                            </button>
+                        </div>
+                        <div class="manage-action-group">
+                            <button class="btn-renew" type="button" data-user-id="{{ member.id }}">Renew Membership</button>
+                            <button class="btn-deactivate" type="button" data-user-id="{{ member.id }}">Deactivate Account</button>
+                        </div>
+                    </div>
+                </div>
+                    {% endif %}
+                {% endfor %}
+                {% if ns.count == 0 %}
+                <div class="no-data-placeholder">
+                    <p>No official members found.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="deactivated" class="tab-panel {{ 'active' if active_tab == 'deactivated' else '' }}">
+            <div class="list-controls">
+                <div class="list-title-group">
+                    <h2 class="section-heading">Deactivated Accounts</h2>
+                    <p class="section-subtext">Soft disabled accounts are preserved for reporting and can be restored.</p>
+                </div>
+                <div class="list-filters">
+                    <div class="list-search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="deactivatedListSearch" placeholder="Search deactivated accounts...">
+                    </div>
+                    <div class="deactivated-filter-row">
+                        <label for="deactivatedDateFilter">Deactivated since</label>
+                        <input type="date" id="deactivatedDateFilter" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="members-card-list">
+                {% set deactivated_members = members|rejectattr('is_active')|list %}
+                {% for member in deactivated_members %}
+                <div class="member-list-card deactivated-card" data-searchable="{{ member.name }} {{ member.email }} WS-WLK-{{ member.id }} {{ member.last_deactivation_reason or 'Manual deactivation' }}" data-deactivated-date="{{ member.last_deactivated_at.strftime('%Y-%m-%d') if member.last_deactivated_at else '' }}">
+                    <div class="member-status-icon">
+                        <div class="status-indicator-box inactive">
+                            <i class="fas fa-user-slash"></i>
+                            <span>Inactive</span>
+                        </div>
+                    </div>
+                    <div class="member-main-info">
+                        <h3 class="member-name">{{ member.name }}</h3>
+                        <p class="member-id-tag">WS-WLK-{{ member.id }}</p>
+                        <p class="detail-text">Email: {{ member.email }}</p>
+                        <p class="detail-text">Contact: {{ member.phone or 'N/A' }}</p>
+                    </div>
+                    <div class="member-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <div class="stat-content">
+                                <span class="stat-label">Deactivated On</span>
+                                <span class="stat-value">{{ member.last_deactivated_at.strftime('%b %d, %Y') if member.last_deactivated_at else 'Unknown' }}</span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-flag"></i>
+                            <div class="stat-content">
+                                <span class="stat-label">Reason</span>
+                                <span class="stat-value">{{ member.last_deactivation_reason or 'Manual soft deactivation' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="member-card-actions">
+                        <button class="btn-reactivate" type="button" data-user-id="{{ member.id }}">Reactivate</button>
+                        <button class="btn-delete-member" type="button" data-user-id="{{ member.id }}">Permanent Delete</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="no-data-placeholder">
+                    <p>No deactivated accounts found.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Receipt / Records Modals -->
+<div id="receiptModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>Payment Receipt</h3>
+            <button class="modal-close" type="button">×</button>
+        </div>
+        <div class="modal-body" id="receiptModalBody">
+            <p class="modal-placeholder">Loading receipt...</p>
+        </div>
+    </div>
+</div>
+
+<div id="recordsModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>Attendance Records</h3>
+            <button class="modal-close" type="button">×</button>
+        </div>
+        <div class="modal-body" id="recordsModalBody">
+            <div class="records-empty-state">
+                <p>Select a member to view attendance history.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin/members.js') }}"></script>
+{% endblock %}

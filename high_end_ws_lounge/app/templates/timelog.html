@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/timelog.css') }}?v=1.3">
+{% endblock %}
+
+{% block content %}
+<div class="timelog-wrapper">
+    <h2 class="page-title" aria-label="Usage History and Insights">Your Lounge Session</h2>
+
+    <!-- Insights Section (New & Improved) -->
+    <div class="timelog-stats-grid" role="region" aria-label="Lounge Statistics">
+        <div class="log-stat-card">
+            <div class="stat-icon-circle" aria-hidden="true"><i class="fas fa-history"></i></div>
+            <div class="stat-value">{{ (totals.month_time_minutes or 0) // 60 }}hr {{ (totals.month_time_minutes or 0) % 60 }}m</div>
+            <div class="stat-desc">Monthly Total Hours</div>
+        </div>
+        <div class="log-stat-card">
+            <div class="stat-icon-circle" aria-hidden="true"><i class="fas fa-door-open"></i></div>
+            <div class="stat-value">{{ totals.most_used_room or 'N/A' }}</div>
+            <div class="stat-desc">Most Used Room</div>
+        </div>
+        <div class="log-stat-card">
+            <div class="stat-icon-circle" aria-hidden="true"><i class="fas fa-chart-line"></i></div>
+            <div class="stat-value">{{ totals.avg_session_length or 0 }}m</div>
+            <div class="stat-desc">Avg. Session Length</div>
+        </div>
+        <div class="log-stat-card">
+            <div class="stat-icon-circle" aria-hidden="true"><i class="fas fa-medal"></i></div>
+            <div class="stat-value">{{ logs|length }}</div>
+            <div class="stat-desc">Total Completed Sessions</div>
+        </div>
+    </div>
+
+    <!-- Main Active Session Section -->
+    <div class="control-container">
+        <!-- Real-time Timer and Clock -->
+        <div class="session-monitor text-center">
+            <div class="clock-display" id="clock" aria-live="off">--:--:-- --</div>
+            
+            {% if active_session %}
+                <h3 class="session-title">Active Session Countdown</h3>
+                <!-- Timer for remaining reservation time -->
+                <div class="timer-display" id="sessionTimer" data-endtime="{{ active_session.end_time }}" aria-live="polite">
+                    00:00:00
+                </div>
+                <p class="session-status">
+                    Status: <span class="status-badge active-bg">Active</span>
+                </p>
+                <p class="room-info">Currently using: <strong>{{ active_session.room_name }}</strong></p>
+            {% else %}
+                <h3 class="session-title">No Active Session</h3>
+                <p class="session-status">
+                    Status: <span id="statusText" class="status-muted">Awaiting Reservation</span>
+                </p>
+            {% endif %}
+        </div>
+
+        <!-- Usage History Section (Styled Card Format) -->
+        <div class="recent-logs-section">
+            <h3 class="section-subtitle">Usage History</h3>
+            <div class="history-grid">
+                {% if logs %}
+                    {% for log in logs %}
+                    <div class="history-card" role="article">
+                        <div class="history-header">
+                            <span class="history-date"><i class="far fa-calendar-alt"></i> {{ log.time_in.strftime('%B %d, %Y') }}</span>
+                            <span class="status-badge {% if log.status == 'Cancelled' %}cancelled-bg{% elif log.time_out %}ended-bg{% else %}active-bg{% endif %}">
+                                {{ log.status or ('Ended' if log.time_out else 'Active') }}
+                            </span>
+                        </div>
+                        <div class="history-body">
+                            <div class="history-item">
+                                <span class="label">Room:</span>
+                                <span class="value">{{ log.plan or 'Lounge Area' }}</span>
+                            </div>
+                            <div class="history-item">
+                                <span class="label">Duration:</span>
+                                <span class="value">{{ log.time_in.strftime('%I:%M %p') }} - {{ log.time_out.strftime('%I:%M %p') if log.time_out else 'Ongoing' }}</span>
+                            </div>
+                        </div>
+                        <div class="history-footer">
+                            <span class="duration-text">
+                                <i class="far fa-clock"></i> Total: {{ log.total_time if log.time_out else '--' }} mins
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="no-data">No usage history found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal logic simplified - Only for system notifications if needed, manual Time In/Out removed -->
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/timelog.js') }}"></script>
+{% endblock %}

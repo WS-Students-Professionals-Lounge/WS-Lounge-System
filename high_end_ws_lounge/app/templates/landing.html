@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WS Lounge | Elevate Your Focus</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+</head>
+<body data-show-register="{{ 'true' if show_register else 'false' }}" data-show-login="{{ 'true' if show_login else 'false' }}">
+
+    <header class="header">
+        <div class="container header-flex">
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="WS Logo" class="logo-img">
+                <span class="brand-name">Student & Professionals Lounge</span>
+            </div>
+            <nav class="nav-links">
+                <a href="#hero" class="nav-item">Home</a>
+                <a href="#pricing" class="nav-item">Pricing</a>
+                <a href="#about" class="nav-item">About Us</a>
+            </nav>
+            <div class="auth-buttons">
+                <a href="#" class="nav-item" id="loginNavBtn">Login</a>
+                <a href="#" class="btn-primary btn-nav" id="registerNavBtn">Register</a>
+            </div>
+        </div>
+    </header>
+
+    <section id="hero" class="hero">
+        <div class="container hero-content-wrapper">
+            <div class="hero-content">
+                <h1>Elevate Your Focus.</h1>
+                <p>Flexible spaces, distraction-free. Find your perfect study spot or professional workspace today.</p>
+                <a href="#" class="btn-primary btn-large btn-book-hero" id="bookNowBtn">Book a Space Now</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing" class="rates">
+        <div class="container cards-container">
+            <div class="rate-card">
+                <div class="card-header">
+                    <div class="card-icon"><i class="fas fa-plus"></i></div>
+                    <h3 class="card-title">Common Area</h3>
+                </div>
+                <p class="card-price">₱35 <span class="price-unit">/ hr</span></p>
+                <div class="card-features">
+                    <div class="feature-item"><i class="fas fa-check-circle check-icon"></i> High-speed WiFi</div>
+                    <div class="feature-item"><i class="fas fa-check-circle check-icon"></i> Shared Desks</div>
+                    <div class="feature-item"><i class="fas fa-check-circle check-icon"></i> Quiet Zone</div>
+                </div>
+                <a href="#" class="btn-primary btn-apply">APPLY</a>
+            </div>
+
+            <div class="rate-card">
+                <div class="card-header">
+                    <div class="card-icon"><i class="fas fa-building"></i></div>
+                    <h3 class="card-title">Event Room</h3>
+                </div>
+                <p class="card-price">₱300 <span class="price-unit">/ day</span></p>
+                <div class="card-features">
+                    <div class="feature-item"><i class="fas fa-check-circle check-icon"></i> Guaranteed Desk</div>
+                    <div class="feature-item"><i class="fas fa-check-circle check-icon"></i> High-speed Wifi</div>
+                    <div class="feature-item"><i class="fas fa-check-circle check-icon"></i> 12hr Access</div>
+                </div>
+                <a href="#" class="btn-primary btn-apply">APPLY</a>
+            </div>
+
+            <div class="rate-card">
+                <div class="card-header">
+                    <div class="card-icon"><i class="fas fa-user"></i></div>
+                    <h3 class="card-title">Comfy Room</h3>
+                </div>
+                <p class="card-price">₱150 <span class="price-unit">/ day</span></p>
+                <div class="card-features">
+                    <div class="feature-item"><i class="fas fa-check-circle check-icon"></i> Guaranteed Desk</div>
+                    <div class="feature-item"><i class="fas fa-check-circle check-icon"></i> 12hr Access</div>
+                    <div class="feature-item"><i class="fas fa-check-circle check-icon"></i> High-speed Wifi</div>
+                </div>
+                <a href="#" class="btn-primary btn-apply">APPLY</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="about">
+        <div class="container about-grid">
+            <div class="about-content">
+                <h2>Who We Are</h2>
+                <p>Our mission is to support your focus by providing a quiet, distraction-free environment. Find your perfect study spot or professional workspace today.</p>
+                <div class="about-icons">
+                    <div class="about-icon-item">
+                        <div class="about-icon-circle"><i class="fas fa-rocket"></i></div>
+                        Productivity
+                    </div>
+                    <div class="about-icon-item">
+                        <div class="about-icon-circle"><i class="fas fa-users"></i></div>
+                        Community
+                    </div>
+                    <div class="about-icon-item">
+                        <div class="about-icon-circle"><i class="fas fa-expand-arrows-alt"></i></div>
+                        Flexibility
+                    </div>
+                </div>
+            </div>
+            <div class="about-image-container">
+                <img src="{{ url_for('static', filename='img/Us_img.png') }}" alt="Workspace Team Meeting" class="about-img">
+            </div>
+        </div>
+    </section>
+
+    <div id="loginModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal" id="closeLogin">&times;</span>
+            <div class="modal-logo-container">
+                <img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="WS Logo" class="modal-logo">
+            </div>
+            <h2 class="welcome-text">Welcome Back</h2>
+            {% with messages = get_flashed_messages(category_filter=['danger']) %}
+                {% if messages %}
+                    <div class="modal-flash modal-flash-danger">
+                        {{ messages[0] }}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            <form method="POST" action="{{ url_for('auth.login') }}" class="modal-form">
+                {{ login_form.hidden_tag() }}
+                <div class="input-group">
+                    <label>Email</label>
+                    {{ login_form.email(placeholder="Enter your email") }}
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    {{ login_form.password(placeholder="Enter your password") }}
+                </div>
+                <div class="forgot-container">
+                    <a href="#" class="forgot-text">Forgot Password?</a>
+                </div>
+                <button type="submit" class="btn-login-submit">Login</button>
+            </form>
+            <p class="signup-redirect">Don't have an account? <a href="#" id="toRegister">Sign up</a></p>
+        </div>
+    </div>
+
+    <div id="registerModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal" id="closeRegister">&times;</span>
+            <div class="modal-logo-container">
+                <img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="WS Logo" class="modal-logo">
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="modal-flash modal-flash-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <h2 class="welcome-text">Create Your Account</h2>
+            <form method="POST" action="{{ url_for('auth.register') }}" class="modal-form">
+                {{ register_form.hidden_tag() }}
+                <div class="input-group">
+                    <label>Name</label>
+                    {{ register_form.name(placeholder="Enter your full name") }}
+                </div>
+                <div class="input-group">
+                    <label>Email</label>
+                    {{ register_form.email(placeholder="Enter your email") }}
+                </div>
+                <div class="input-group">
+                    <label>Phone</label>
+                    {{ register_form.phone(placeholder="Enter your phone number") }}
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    {{ register_form.password(placeholder="Create a password") }}
+                </div>
+                <div class="input-group">
+                    <label>Repeat Password</label>
+                    {{ register_form.password2(placeholder="Repeat your password") }}
+                </div>
+                <button type="submit" class="btn-login-submit">Register</button>
+            </form>
+            <p class="signup-redirect">Already have an account? <a href="#" id="toLogin">Log in</a></p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+</body>
+</html>
+

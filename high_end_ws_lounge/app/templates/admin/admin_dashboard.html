@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_dashboard.css') }}?v=3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modals/admin_walkin_modal.css') }}?v=3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/rooms.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <div>
+            <h1>Admin Dashboard</h1>
+            <h2 id="adminWelcome" class="welcome-text">Welcome Back, <span id="adminUserName">{{ current_user.name }}</span>!</h2>
+        </div>
+        <div id="dashboardClock" class="dashboard-clock">00:00:00</div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon-wrapper">
+                <img src="https://img.icons8.com/ios/50/64748b/group-foreground-selected.png" alt="members">
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Members</span>
+                <h2 class="stat-value">{{ total_members }}</h2>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon-wrapper">
+                <img src="https://img.icons8.com/ios/50/64748b/shield.png" alt="plans">
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Active Plans</span>
+                <h2 class="stat-value">{{ active_plans }}</h2>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon-wrapper">
+                <img src="https://img.icons8.com/ios/50/64748b/calendar.png" alt="res">
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Pending Reservations</span>
+                <h2 class="stat-value">{{ reservations_today }}</h2>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon-wrapper">
+                <img src="https://img.icons8.com/ios/50/64748b/money-box.png" alt="earnings">
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Earnings Today</span>
+                <h2 class="stat-value">₱{{ "{:,.2f}".format(revenue_today) }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-dashboard-layout">
+        <div class="left-section">
+            <div class="section-header">
+                <h2 class="section-title">Live Room Status</h2>
+                <div class="search-container">
+                    <input type="text" id="dashboardSearch" placeholder="Search customer or room..." class="search-input">
+                </div>
+            </div>
+
+            <!-- Slot Occupancy Summary -->
+            <div class="occupancy-summary-section">
+                <div class="summary-card">
+                    <div class="summary-item">
+                        <span class="summary-label">Common Area - Occupied</span>
+                        <span class="summary-value">{{ common_area_occupancy }}</span>
+                    </div>
+                    <div class="summary-divider"></div>
+                    <div class="summary-item">
+                        <span class="summary-label">Common Area - Available</span>
+                        <span class="summary-value">{{ common_area_available_slots }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="room-grid common-area-grid">
+                <div class="room-card dashboard-card common-area-summary" data-room="common area">
+                    <div class="room-card-header">
+                        <span class="room-name">Common Area</span>
+                        <span class="status-pill {{ 'occupied' if common_area_available_slots == 0 or common_area_occupancy > 0 else 'available' }}">
+                            {{ 'Full' if common_area_available_slots == 0 else ('Occupied' if common_area_occupancy > 0 else 'Available') }}
+                        </span>
+                    </div>
+                    <div class="room-card-body">
+                        <div class="info-row">
+                            <span class="info-label">Occupied</span>
+                            <span class="info-value">{{ common_area_occupancy }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Available Slots</span>
+                            <span class="info-value">{{ common_area_available_slots }}</span>
+                        </div>
+                        {% if common_area_occupancy == 0 %}
+                        <div class="info-row name-row">
+                            <span class="info-label">Info:</span>
+                            <span class="info-value">No active Common Area sessions</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if common_area_reservations %}
+                    {% for res in common_area_reservations | sort(attribute='end_time') %}
+                    {% set is_expired = false %}
+                    {% if res.end_time and not res.is_open_time and res.end_time < now %}
+                        {% set is_expired = true %}
+                    {% endif %}
+                    <div class="room-card dashboard-card {{ 'session-expired' if is_expired }}" 
+                        data-customer="{{ res.customer_name|lower }}" 
+                        data-room="{{ res.room.name|lower }}"
+                        data-isopentime="{{ 'true' if res.is_open_time else 'false' }}"
+                        data-endtime="{{ res.end_time.isoformat() if res.end_time else '' }}">
+                        
+                        <div class="end-time-indicator">TIME ENDED - PLEASE CHECKOUT</div>
+
+                        <div class="room-card-header">
+                            <span class="room-name">{{ res.room.name }}</span>
+                            <span class="status-pill occupied">Occupied</span>
+                        </div>
+                        
+                        <div class="room-card-body">
+                            <div class="info-row">
+                                <span class="info-label">Room</span>
+                                <span class="info-value">{{ res.room.name }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Start</span>
+                                <span class="info-value">{{ res.start_time.strftime('%I:%M %p') }}</span>
+                            </div>
+
+                            {% if not res.is_open_time %}
+                            <div class="info-row">
+                                <span class="info-label">End</span>
+                                <span class="info-value">{{ res.end_time.strftime('%I:%M %p') if res.end_time else '---' }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if res.is_open_time %}
+                            <div class="info-row">
+                                <span class="info-label">Live Timer</span>
+                                <span class="timer-text" 
+                                    data-starttime="{{ res.start_time.isoformat() }}"
+                                    data-isopentime="true">
+                                    (00:00:00)
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            <div class="info-row name-row">
+                                <span class="info-label">Name:</span>
+                                <span class="info-value">{{ res.customer_name }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Customer ID:</span>
+                                <span class="info-value">{{ res.customer_id or 'N/A' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="room-card-footer card-action-row">
+                            {% if not res.is_open_time %}
+                            <button class="btn-end-session add-time-btn" type="button"
+                                    data-reservation-id="{{ res.id }}"
+                                    data-customer-name="{{ res.customer_name }}"
+                                    data-room-name="{{ res.room.name }}"
+                                    data-start-time="{{ res.start_time.isoformat() }}"
+                                    data-end-time="{{ res.end_time.isoformat() if res.end_time else '' }}"
+                                    data-room-rate="{{ res.room.base_rate or 0 }}"
+                                    data-total-amount="{{ res.total_amount or 0 }}"
+                                    data-is-open-time="{{ 'true' if res.is_open_time else 'false' }}">Add Time</button>
+                            {% endif %}
+                            <button class="btn-end-session end-session-btn" 
+                                    data-reservation-id="{{ res.id }}"
+                                    data-customer-name="{{ res.customer_name }}"
+                                    data-room-name="{{ res.room.name }}"
+                                    data-start-time="{{ res.start_time.isoformat() }}"
+                                    data-room-rate="{{ res.room.base_rate or 0 }}"
+                                    data-extra-fee="{{ res.extra_fee or 0 }}"
+                                    data-total-amount="{{ res.total_amount or 0 }}"
+                                    data-is-open-time="{{ 'true' if res.is_open_time else 'false' }}">End Session</button>
+                            
+                            <form method="post" action="{{ url_for('admin.delete_reservation', res_id=res.id) }}" class="confirm-delete-form">
+                                <button type="submit" class="btn-end-session btn-error">✕</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="room-grid" id="roomGridContainer">
+                {% for room in rooms if room.name.strip().lower() != 'common area' %}
+                    {% set active_res = room_reservations[room.id] if room.id in room_reservations else none %}
+                    {% set is_expired = false %}
+                    {% if active_res and active_res.end_time and not active_res.is_open_time %}
+                        {% if active_res.end_time < now %}
+                            {% set is_expired = true %}
+                        {% endif %}
+                    {% endif %}
+
+                    <div class="room-card dashboard-card {{ 'session-expired' if is_expired }}" 
+                        data-customer="{{ active_res.customer_name|lower if active_res else '' }}" 
+                        data-room="{{ room.name.strip().lower() }}"
+                        data-endtime="{{ active_res.end_time.isoformat() if (active_res and active_res.end_time) else '' }}"
+                        data-isopentime="{{ 'true' if (active_res and active_res.is_open_time) else 'false' }}">
+                        
+                        <div class="end-time-indicator">TIME ENDED - {{ room.name }}</div>
+
+                        <div class="room-card-header">
+                            <span class="room-name">{{ room.name }}</span>
+                            <span class="status-pill {{ 'occupied' if active_res else 'available' }}">
+                                {{ 'Occupied' if active_res else 'Available' }}
+                            </span>
+                        </div>
+                        
+                        <div class="room-card-body">
+                            <div class="info-row">
+                                <span class="info-label">Status</span>
+                                <span class="status-text {{ 'occupied' if active_res else 'available' }}">
+                                    {{ 'Occupied' if active_res else 'Available' }}
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Start</span>
+                                <span class="info-value">{{ active_res.start_time.strftime('%I:%M %p') if active_res else '---' }}</span>
+                            </div>
+
+                            {% if active_res %}
+                                {% if not active_res.is_open_time %}
+                                <div class="info-row">
+                                    <span class="info-label">End</span>
+                                    <span class="info-value">{{ active_res.end_time.strftime('%I:%M %p') if active_res.end_time else '---' }}</span>
+                                </div>
+                                {% else %}
+                                <div class="info-row">
+                                    <span class="info-label">Live Timer</span>
+                                    <span class="timer-text" 
+                                        data-starttime="{{ active_res.start_time.isoformat() }}"
+                                        data-isopentime="true">
+                                        (00:00:00)
+                                    </span>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                            <div class="info-row">
+                                <span class="info-label">End</span>
+                                <span class="info-value">---</span>
+                            </div>
+                            {% endif %}
+
+                            <div class="info-row name-row">
+                                <span class="info-label">Name:</span>
+                                <span class="info-value">{{ active_res.customer_name if active_res else '---' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="room-card-footer">
+                            {% if active_res %}
+                                <div class="card-action-row">
+                                    <button class="btn-end-session add-time-btn" type="button"
+                                            data-reservation-id="{{ active_res.id }}"
+                                            data-customer-name="{{ active_res.customer_name }}"
+                                            data-room-name="{{ room.name }}"
+                                            data-start-time="{{ active_res.start_time.isoformat() }}"
+                                            data-end-time="{{ active_res.end_time.isoformat() if active_res.end_time else '' }}"
+                                            data-room-rate="{{ active_res.room.base_rate or 0 }}"
+                                            data-total-amount="{{ active_res.total_amount or 0 }}"
+                                            data-extra-fee="{{ active_res.extra_fee or 0 }}"
+                                            data-is-open-time="{{ 'true' if active_res.is_open_time else 'false' }}">
+                                        Add Time
+                                    </button>
+                                    <button class="btn-end-session end-session-btn" 
+                                            data-reservation-id="{{ active_res.id }}"
+                                            data-customer-name="{{ active_res.customer_name }}"
+                                            data-room-name="{{ room.name }}"
+                                            data-start-time="{{ active_res.start_time.isoformat() }}"
+                                            data-room-rate="{{ active_res.room.base_rate or 0 }}"
+                                            data-extra-fee="{{ active_res.extra_fee or 0 }}"
+                                            data-total-amount="{{ active_res.total_amount or 0 }}"
+                                            data-is-open-time="{{ 'true' if active_res.is_open_time else 'false' }}">End Session</button>
+                                    
+                                    <form method="post" action="{{ url_for('admin.delete_reservation', res_id=active_res.id) }}" class="confirm-delete-form">
+                                        <button type="submit" class="btn-end-session btn-error">✕</button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div id="noSearchResults" class="no-results-message">No matching customer or room found.</div>
+        </div>
+
+        <div class="right-section">
+            <div class="walkin-header">
+                <button type="button" id="openWalkinBtn" class="btn-walkin">Walk-in</button>
+            </div>
+
+            <div class="waiting-list-card">
+                <div class="waiting-header">
+                    <h3>Waiting List - Today</h3>
+                    <img src="https://img.icons8.com/ios/50/64748b/calendar.png" alt="calendar-icon" class="mini-calendar">
+                </div>
+                
+                <div class="waiting-items">
+                    {% for res in pending_reservations %}
+                    <div class="waiting-item">
+                        <p class="waiting-name">Next: {{ res.customer_name }}</p>
+                        <p class="waiting-details">({{ res.room.name }}, {{ res.start_time.strftime('%I:%M') }} - {{ res.end_time.strftime('%I:%M %p') if res.end_time else 'Open' }})</p>
+                    </div>
+                    {% else %}
+                    <p class="no-data">No upcoming reservations.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="common-area-occupants-card">
+                <div class="occupants-header">
+                    <h3>👥 Common Area Members</h3>
+                    <span class="occupants-count" id="occupantsCount">0</span>
+                </div>
+                
+                <div class="occupants-list" id="occupantsList">
+                    <p class="loading-text">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="walkinModal" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-form-side">
+            <h3 class="section-title">Walk-in Check-in</h3>
+            <p class="text-muted modal-helper-text">Use this form for immediate lounge access.</p>
+            
+            <form id="walkinForm" method="POST" action="{{ url_for('admin.walkin_checkin_modal') }}">
+                {{ form.hidden_tag() }}
+                <input type="hidden" name="total_price" id="total_price" value="0">
+                
+                <div class="input-grid-2">
+                    <div class="input-group">
+                        <label class="form-label">Customer Name</label>
+                        {{ form.customer_name(class_="modern-input", id="f-name", placeholder="e.g Darwen Salcedo") }}
+                    </div>
+                    <div class="input-group">
+                        <label class="form-label">Contact Number</label>
+                        {{ form.contact_number(class_="modern-input", id="f-contact", placeholder="e.g 0912-123-4567") }}
+                    </div>
+                </div>
+
+                <div class="input-grid-2">
+                    <div class="input-group">
+                        <label class="form-label">Select Area</label>
+                        {{ form.room_id(class_="modern-select", id="f-area") }}
+                    </div>
+
+                </div>
+
+                <div class="input-grid-3">
+                    <div class="input-group">
+                        <label class="form-label">Start Date/Time</label>
+                        <input type="datetime-local" id="f-start-time" class="modern-input" name="start_time">
+                    </div>
+                    <div class="input-group">
+                        <label class="form-label">End Date/Time</label>
+                        <input type="datetime-local" id="f-end-time" class="modern-input" name="end_time">
+                    </div>
+                    <div class="input-group align-items-center">
+                        <label class="form-label">Open Time</label>
+                        <label class="switch">
+                            <input type="checkbox" id="f-open-time" name="open_time">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="form-label form-label-uppercase">Staff Notes & Extra Fees</label>
+                    <label class="form-label">Predefined Add-ons</label>
+                    <select id="f-predefined-addon" name="predefined_addon_name" class="modern-select">
+                        <option value="None">None</option>
+                        <option value="Projector" data-unit-price="150">Projector (+₱150)</option>
+                        <option value="Extra Chairs" data-unit-price="50">Extra Chairs (+₱50 per chair)</option>
+                        <option value="Extension Cord" data-unit-price="100">Extension Cord (+₱100)</option>
+                        <option value="Whiteboard Set" data-unit-price="200">Whiteboard Set (+₱200)</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" id="f-predefined-addon-qty" name="predefined_addon_qty" class="modern-input" min="1" value="1" step="1" placeholder="1">
+                    <small class="text-muted">Empty/invalid values become 1.</small>
+                </div>
+
+                <input type="hidden" name="addons_json" id="addons_json" value="[]">
+                <input type="hidden" name="addon_subtotal" id="addon_subtotal" value="0.00">
+
+                <div class="input-group">
+                    <label class="form-label">Add-on Request (Staff Notes)</label>
+                    {{ form.extra_notes(class_="modern-input", id="f-notes", rows="2", placeholder="e.g. Extra monitor, HDMI cable...") }}
+                </div>
+
+                <div class="input-group half-width">
+                    <label class="form-label">Additional Fees (₱)</label>
+                    {{ form.extra_fee(class_="modern-input", id="f-fees", placeholder="0.00") }}
+                </div>
+
+            </form>
+        </div>
+
+        <div class="modal-preview-side">
+            <div class="preview-border-box">
+                <h3 class="section-title">Check-in Details</h3>
+                
+                <div class="preview-list">
+                    <div class="preview-item"><span class="preview-label">Customer Name:</span> <span id="p-customer">----</span></div>
+                    <div class="preview-item"><span class="preview-label">Contact No:</span> <span id="p-contact">----</span></div>
+                    <div class="preview-item"><span class="preview-label">Area:</span> <span id="p-area">----</span></div>
+                    <div class="preview-item"><span class="preview-label">Start Time:</span> <span id="p-start">----</span></div>
+                    <div class="preview-item"><span class="preview-label">End Time:</span> <span id="p-end">----</span></div>
+
+                    <div class="preview-item"><span class="preview-label">Duration:</span> <span id="p-duration">----</span></div>
+                    <div class="preview-item"><span class="preview-label">Selected Add-on Total:</span> <span id="p-addon-total-display">₱0.00</span></div>
+                    <div class="preview-item"><span class="preview-label">Additional Fees:</span> <span id="p-fees-display">₱0.00</span></div>
+                </div>
+
+
+                <div class="discount-row">
+                    <label>Discount:</label>
+                    {{ form.discount(class_="discount-select", id="f-discount") }}
+                </div>
+                <div class="total-box-updated">
+                    <p class="total-label">TOTAL PAYABLE</p>
+                    <h2 class="total-amount-updated" id="p-total">₱0.00</h2>
+                    
+                    <div class="modal-btn-group-row">
+                        <button type="submit" form="walkinForm" class="btn-confirm-blue">Confirm & Save</button>
+                        <button type="button" id="closeModalBtn" class="btn-cancel-red">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="addTimeModal" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-form-side">
+            <h3 class="section-title" id="extendModalTitle">Extend Session</h3>
+            <p class="text-muted modal-helper-text" id="extendModalNote">Add extra time or billing adjustments for active sessions.</p>
+            <div class="input-group">
+                <label class="form-label">Customer</label>
+                <p id="extendCustomer" class="info-value">---</p>
+            </div>
+            <div class="input-group">
+                <label class="form-label">Room</label>
+                <p id="extendRoom" class="info-value">---</p>
+            </div>
+            <div class="input-group">
+                <label class="form-label">Current End Time</label>
+                <p id="extendCurrentEnd" class="info-value">---</p>
+            </div>
+            <div class="input-group">
+                <label class="form-label">Add Hours</label>
+                <input type="number" id="extendHoursInput" class="modern-input" min="1" step="1" value="1">
+            </div>
+            <div class="input-group">
+                <label class="form-label">Rate per Hour</label>
+                <p id="extendRate" class="info-value">₱0.00</p>
+            </div>
+            <div class="input-group">
+                <label class="form-label">Original Total</label>
+                <p id="extendOriginalTotal" class="info-value">₱0.00</p>
+            </div>
+            <div class="input-group">
+                <label class="form-label">New Total</label>
+                <p id="extendUpdatedTotal" class="info-value">₱0.00</p>
+            </div>
+            <div class="modal-btn-group-row">
+                <button type="button" id="confirmExtendBtn" class="btn-confirm-blue">Confirm Extend</button>
+                <button type="button" id="closeExtendModalBtn" class="btn-cancel-red">Cancel</button>
+            </div>
+        </div>
+        <div class="modal-preview-side">
+            <div class="preview-border-box">
+                <h3 class="section-title">Extension Summary</h3>
+                <div class="preview-list">
+                    <div class="preview-item"><span class="preview-label">Customer</span><span id="extendSummaryCustomer">---</span></div>
+                    <div class="preview-item"><span class="preview-label">Room</span><span id="extendSummaryRoom">---</span></div>
+                    <div class="preview-item"><span class="preview-label">Added Hours</span><span id="extendSummaryHours">1</span></div>
+                    <div class="preview-item"><span class="preview-label">New End Time</span><span id="extendSummaryEnd">---</span></div>
+                    <div class="preview-item"><span class="preview-label">New Total Bill</span><span id="extendSummaryTotal">₱0.00</span></div>
+                </div>
+                <p class="text-muted modal-helper-text">This updates the reservation end time and total bill immediately for the fixed session.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{{ url_for('static', filename='js/admin/admin_dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/modals/admin_walkin_modal.js') }}"></script>
+{% endblock %}

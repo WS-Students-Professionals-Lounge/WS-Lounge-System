@@ -1,0 +1,472 @@
+/* =========================================
+   USAGE HISTORY PAGE - Professional Client Design
+   Matching Admin Dashboard Design System
+   ========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+    --primary: #1f4e79;
+    --primary-light: #3a6ea5;
+    --accent: #e6f0fa;
+    --success: #28a745;
+    --warning: #ffc107;
+    --danger: #dc3545;
+    --text-heading: #1f4e79;
+    --text-body: #333333;
+    --gray-100: #f4f7fb;
+    --gray-200: #e8eff7;
+    --gray-300: #d5dee8;
+    --gray-400: #9aa4b2;
+    --gray-500: #6c757d;
+    --gray-600: #515d6f;
+    --gray-700: #3c4756;
+    --gray-800: #2a2f3f;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+    --shadow: rgba(0,0,0,0.1) 0px 2px 4px;
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12);
+    --radius: 8px;
+    --radius-lg: 12px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background: #ffffff;
+    font-family: 'Inter', 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.timelog-wrapper {
+    padding: 28px;
+    max-width: 1400px;
+    margin: 0 auto;
+    background: #ffffff;
+}
+
+/* ===== Page Title ===== */
+.page-title {
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: var(--text-heading);
+    letter-spacing: -0.03em;
+    margin: 0 0 32px 0;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--accent);
+}
+
+/* ===== Stats Grid ===== */
+.timelog-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+}
+
+.log-stat-card {
+    background: #ffffff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.log-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+}
+
+.log-stat-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.stat-icon-circle {
+    font-size: 2rem;
+    color: var(--primary);
+    margin-bottom: 12px;
+    display: block;
+}
+
+.stat-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--text-heading);
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+}
+
+.stat-desc {
+    font-size: 0.85rem;
+    color: var(--text-body);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ===== Control Container ===== */
+.control-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+}
+
+/* ===== Session Monitor ===== */
+.session-monitor {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: #ffffff;
+    border-radius: var(--radius-lg);
+    padding: 40px 28px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+.session-monitor::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+}
+
+.session-monitor > * {
+    position: relative;
+    z-index: 1;
+}
+
+.clock-display {
+    font-family: 'SF Mono', 'Courier New', monospace;
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+    opacity: 0.9;
+}
+
+.session-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0 0 24px 0;
+    letter-spacing: -0.02em;
+}
+
+.timer-display {
+    font-family: 'SF Mono', 'Courier New', monospace;
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    margin: 24px 0;
+    line-height: 1.2;
+}
+
+.session-status {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 16px 0;
+}
+
+.room-info {
+    font-size: 0.95rem;
+    opacity: 0.95;
+    margin: 12px 0 0 0;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.active-bg {
+    background: rgba(40, 167, 69, 0.9);
+    color: #ffffff;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.ended-bg {
+    background: rgba(108, 117, 125, 0.9);
+    color: #ffffff;
+    border: 1px solid rgba(108, 117, 125, 0.3);
+}
+
+.cancelled-bg {
+    background: rgba(220, 53, 69, 0.9);
+    color: #ffffff;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.session-muted {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ===== Recent Logs Section ===== */
+.recent-logs-section {
+    background: #ffffff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.recent-logs-section:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent);
+}
+
+.section-subtitle {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-heading);
+    margin: 0 0 24px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-subtitle i {
+    color: var(--primary);
+    font-size: 1.4rem;
+}
+
+/* ===== History Grid ===== */
+.history-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.history-card {
+    background: var(--accent);
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius);
+    padding: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.history-card:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateX(4px);
+    border-left-color: var(--primary-light);
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
+.history-date {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.history-date i {
+    color: var(--primary);
+}
+
+.history-body {
+    margin-bottom: 12px;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+
+.history-item:last-child {
+    margin-bottom: 0;
+}
+
+.history-item .label {
+    font-weight: 700;
+    color: var(--text-heading);
+    min-width: 80px;
+}
+
+.history-item .value {
+    color: var(--text-body);
+    font-weight: 600;
+}
+
+.history-footer {
+    padding-top: 12px;
+    border-top: 1px solid rgba(31, 78, 121, 0.1);
+}
+
+.duration-text {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.duration-text i {
+    font-size: 0.95rem;
+}
+
+.no-data {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gray-600);
+    background: var(--gray-100);
+    border-radius: var(--radius);
+}
+
+/* ===== Text Classes ===== */
+.text-center {
+    text-align: center;
+}
+
+.text-muted {
+    color: var(--gray-600);
+}
+
+/* ===== Responsive Design ===== */
+@media (max-width: 1024px) {
+    .control-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .timelog-wrapper {
+        padding: 16px;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+    }
+
+    .timelog-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .log-stat-card {
+        padding: 20px;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+    }
+
+    .session-monitor {
+        padding: 30px 20px;
+    }
+
+    .timer-display {
+        font-size: 2.2rem;
+    }
+
+    .history-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .history-item .label {
+        margin-bottom: 4px;
+    }
+}
+
+@media (max-width: 480px) {
+    .timelog-wrapper {
+        padding: 12px;
+    }
+
+    .page-title {
+        font-size: 1.3rem;
+        margin-bottom: 20px;
+    }
+
+    .timelog-stats-grid {
+        gap: 12px;
+    }
+
+    .log-stat-card {
+        padding: 16px 12px;
+    }
+
+    .stat-value {
+        font-size: 1.6rem;
+    }
+
+    .session-monitor {
+        padding: 24px 16px;
+    }
+
+    .clock-display {
+        font-size: 1.4rem;
+        margin-bottom: 20px;
+    }
+
+    .timer-display {
+        font-size: 1.8rem;
+        letter-spacing: 1px;
+        margin: 16px 0;
+    }
+
+    .session-title {
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+    }
+
+    .recent-logs-section {
+        padding: 16px;
+    }
+
+    .section-subtitle {
+        font-size: 1rem;
+    }
+
+    .history-card {
+        padding: 12px;
+    }
+
+    .history-date {
+        font-size: 0.8rem;
+    }
+
+    .history-item {
+        font-size: 0.85rem;
+    }
+}

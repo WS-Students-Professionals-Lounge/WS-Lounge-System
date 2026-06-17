@@ -1,0 +1,201 @@
+/* --- RESET & LAYOUT --- */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background: #ffffff; /* plain white background for admin pages */
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #333;
+    display: flex;
+}
+
+/* Client palette tokens to match admin blue theme */
+:root {
+    --client-primary: #4361ee;
+    --client-primary-light: #3651d1;
+    --client-gray-50: #f4f7fe;
+    --client-text: #1e293b;
+}
+
+.sidebar-layout {
+    display: flex;
+    width: 100%;
+}
+
+/* --- SIDEBAR DESIGN --- */
+.sidebar {
+    width: 280px;
+    background: white;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.05);
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+/* UPDATED LOGO SECTION STYLES - Dako kag Transparent */
+.sidebar-header {
+    padding: 35px 15px;
+    text-align: center;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.logo-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.logo-container-circle {
+    /* Dindakuan naton ang bilog */
+    width: 110px;
+    height: 110px;
+    /* Ginkwa ang white background, ginbutang background: transparent */
+    background: transparent;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    overflow: hidden;
+    /* Gintandog ang padding para magsanto ang daku nga logo */
+    padding: 5px;
+}
+
+.sidebar-logo {
+    /* Ang image ma-follow sa bag-o nga kadakuon sang container */
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.fallback-icon {
+    display: none;
+    color: white;
+    font-size: 2rem;
+}
+
+.logo-sub-header {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 1.2px;
+    margin-bottom: 2px;
+}
+
+.logo-main-title {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -0.5px;
+}
+
+/* --- SIDEBAR LINKS --- */
+.sidebar-links {
+    padding: 20px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-grow: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.side-link {
+    text-decoration: none;
+    color: #6c757d;
+    padding: 12px 15px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.side-link i {
+    width: 20px;
+    font-size: 1.1rem;
+}
+
+.side-link:hover {
+    background: #f8f9ff;
+    color: #4361ee;
+}
+
+.side-link.active {
+    background: #eef2ff;
+    color: #4361ee;
+    box-shadow: 0 4px 6px rgba(67, 97, 238, 0.1);
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding-bottom: 20px;
+}
+
+.logout-link {
+    color: #e63946;
+}
+
+.logout-link:hover {
+    background: #fff1f2;
+}
+
+/* --- MAIN CONTENT WRAPPER --- */
+.main-wrapper {
+    margin-left: 280px;
+    width: calc(100% - 280px);
+    padding: 40px;
+}
+
+.content-container {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.welcome-text {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--client-text);
+    margin: 6px 0 0 0;
+}
+
+/* --- CARDS & BUTTONS --- */
+.card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: rgba(0,0,0,0.1) 0px 2px 4px;
+    border: none;
+    margin-bottom: 16px;
+}
+
+.btn-primary {
+    background: #4361ee;
+    border: none;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.alert {
+    border-radius: 12px;
+    padding: 15px;
+    background: #eef2ff;
+    border-left: 5px solid #4361ee;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}

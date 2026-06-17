@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/solo_applications.css') }}">
+{% endblock %}
+
+{% block content %}
+<h2>Solo Plan Applications</h2>
+{% if pending_plans %}
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Member</th>
+                <th>Plan</th>
+                <th>Payment Method</th>
+                <th>Date Applied</th>
+                <th>Receipt</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plan in pending_plans %}
+            <tr>
+                <td>{{ plan.user.name }} ({{ plan.user.email }})</td>
+                <td>{{ plan.plan_name }}</td>
+                <td>{{ plan.payment_method or 'N/A' }}</td>
+                <td>{{ plan.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    {% if plan.receipt_image %}
+                        <a href="{{ url_for('static', filename='uploads/receipts/' + plan.receipt_image) }}" target="_blank" class="btn btn-outline-primary btn-sm">View</a>
+                    {% else %}
+                        <span class="text-muted">No receipt</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('admin.approve_solo_plan', plan_id=plan.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.reject_solo_plan', plan_id=plan.id) }}" class="d-inline ms-2">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Reject this application?')">Reject</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No pending solo plan applications.</p>
+{% endif %}
+<a href="{{ url_for('admin.members') }}" class="btn btn-secondary">Back to Members</a>
+{% endblock %}

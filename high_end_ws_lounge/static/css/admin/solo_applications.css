@@ -1,0 +1,195 @@
+/* =========================================
+   ADMIN SOLO APPLICATIONS - Modern Style
+   Matching admin_reservations.css
+   ========================================= */
+
+.solo-apps-container {
+    padding: 46px 50px;
+    background: #ffffff;
+    min-height: 100vh;
+}
+
+.apps-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+/* Applications Table */
+.apps-table-card {
+    background: #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0px 4px 6px 1px rgba(0, 0, 0, 0.25);
+    border: 1px solid #f8fafc;
+}
+
+.apps-table {
+    width: 100%;
+}
+
+.apps-table thead th {
+    background: #f8fafc;
+    padding: 20px;
+    font-weight: 700;
+    color: #374151;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.apps-table tbody td {
+    padding: 20px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.apps-table tr:hover td {
+    background: #f8fafc;
+}
+
+/* Status & Toggle */
+.app-status {
+    padding: 8px 16px;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    min-width: 100px;
+    text-align: center;
+}
+
+.status-pending { background: #fef3c7; color: #92400e; }
+.status-approved { background: #d1fae5; color: #065f46; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
+
+.approval-toggle {
+    position: relative;
+    margin: 0 10px;
+}
+
+/* Reuse toggle from admin_reservations */
+.approval-toggle-wrapper {
+    position: relative;
+    width: 60px;
+    height: 30px;
+}
+
+.approval-toggle-input { display: none; }
+
+.approval-toggle-label {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #ff4d4d;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: 0.4s;
+    border: 1.5px solid #e2e8f0;
+}
+
+.approval-toggle-label:after {
+    content: "";
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    background: white;
+    border-radius: 50%;
+    top: 2.5px;
+    left: 4px;
+    transition: 0.4s;
+}
+
+.approval-toggle-input:checked + .approval-toggle-label:after {
+    transform: translateX(28px);
+}
+
+.approval-toggle-input:checked + .approval-toggle-label {
+    background: #22c55e;
+    border-color: #22c55e;
+}
+
+/* Action Buttons */
+.action-btn-small {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 90px;
+}
+
+.btn-approve {
+    background: #22c55e;
+    color: white;
+}
+
+.btn-reject {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-view {
+    background: #4361ee;
+    color: white;
+}
+
+/* Form Modal Styles (for details) */
+.app-details-modal {
+    background: rgba(0,0,0,0.5);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+}
+
+.modal-close {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .solo-apps-container {
+        padding: 20px;
+    }
+    
+    .apps-table thead th,
+    .apps-table tbody td {
+        padding: 15px 10px;
+        font-size: 0.9rem;
+    }
+}
+

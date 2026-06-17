@@ -1,0 +1,381 @@
+/**
+ * Add-ons System Styling
+ * 
+ * Provides styling for:
+ * - Add-on selection UI
+ * - Quantity controls
+ * - Summary display
+ * - Real-time calculations display
+ */
+
+/* ========================================================================
+   ADDONS SECTION STYLING
+   ======================================================================== */
+
+.addons-section {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.addons-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.addons-title i {
+    color: #007bff;
+    font-size: 18px;
+}
+
+/* ========================================================================
+   ADDONS LIST STYLING
+   ======================================================================== */
+
+.addons-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.addon-item {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    padding: 15px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.addon-item:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.addon-item.selected {
+    background: #e7f3ff;
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+/* ========================================================================
+   ADDON ITEM HEADER
+   ======================================================================== */
+
+.addon-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.addon-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.addon-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.addon-name {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.addon-description {
+    color: #6c757d;
+    font-size: 12px;
+    margin: 0;
+}
+
+.addon-price {
+    font-weight: 700;
+    color: #28a745;
+    font-size: 16px;
+    white-space: nowrap;
+    margin-left: auto;
+}
+
+/* ========================================================================
+   ADDON QUANTITY CONTROLS
+   ======================================================================== */
+
+.addon-quantity-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+    padding: 10px 0;
+    border-top: 1px solid #e9ecef;
+}
+
+.addon-quantity-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #495057;
+    margin: 0;
+    min-width: 70px;
+}
+
+.quantity-input-group {
+    display: flex;
+    align-items: center;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background: white;
+    gap: 0;
+}
+
+.qty-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f8f9fa;
+    color: #495057;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.qty-btn:hover {
+    background: #e9ecef;
+    color: #007bff;
+}
+
+.qty-btn:first-child {
+    border-right: 1px solid #dee2e6;
+    border-radius: 4px 0 0 4px;
+}
+
+.qty-btn:last-child {
+    border-left: 1px solid #dee2e6;
+    border-radius: 0 4px 4px 0;
+}
+
+.addon-quantity-input {
+    width: 60px;
+    height: 36px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    background: white;
+    padding: 0;
+    color: #2c3e50;
+}
+
+.addon-quantity-input:focus {
+    outline: none;
+    background: white;
+}
+
+/* ========================================================================
+   ADDON SUBTOTAL
+   ======================================================================== */
+
+.addon-subtotal {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    font-size: 13px;
+    color: #6c757d;
+    padding-top: 8px;
+    border-top: 1px solid #e9ecef;
+}
+
+.addon-subtotal-value {
+    font-weight: 700;
+    color: #007bff;
+}
+
+/* ========================================================================
+   ADDONS SUMMARY SECTION
+   ======================================================================== */
+
+.addons-summary {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.addons-summary-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #2c3e50;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-item-name {
+    font-weight: 600;
+    flex: 1;
+}
+
+.summary-item-qty {
+    font-size: 12px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.summary-item-price {
+    font-weight: 700;
+    color: #28a745;
+    min-width: 90px;
+    text-align: right;
+}
+
+.summary-total {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 2px solid #dee2e6;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+.summary-total strong {
+    color: #007bff;
+}
+
+/* ========================================================================
+   RESPONSIVE DESIGN
+   ======================================================================== */
+
+@media (max-width: 768px) {
+    .addon-header {
+        flex-wrap: wrap;
+    }
+
+    .addon-price {
+        flex-basis: 100%;
+        text-align: right;
+        margin-left: 30px;
+    }
+
+    .addon-quantity-control {
+        flex-wrap: wrap;
+    }
+
+    .quantity-input-group {
+        flex: 1;
+        min-width: 150px;
+    }
+
+    .summary-item {
+        flex-wrap: wrap;
+    }
+
+    .summary-item-price {
+        flex-basis: 100%;
+        text-align: right;
+    }
+}
+
+/* ========================================================================
+   EMPTY STATE
+   ======================================================================== */
+
+.addons-section .text-muted {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d !important;
+}
+
+/* ========================================================================
+   ANIMATION
+   ======================================================================== */
+
+.addon-item {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========================================================================
+   INTEGRATION WITH RESERVATION FORM
+   ======================================================================== */
+
+/* Ensure add-ons section fits well with existing form styles */
+.reservation-form .addons-section,
+.walkin-form .addons-section {
+    margin-top: 25px;
+    margin-bottom: 25px;
+}
+
+/* Ensure proper spacing between form sections */
+.form-section {
+    margin-bottom: 20px;
+}
+
+.form-section + .addons-section {
+    margin-top: 25px;
+}
+
+/* ========================================================================
+   PRINT STYLING
+   ======================================================================== */
+
+@media print {
+    .addons-section {
+        page-break-inside: avoid;
+        border: 1px solid #999;
+    }
+
+    .addon-item {
+        page-break-inside: avoid;
+    }
+
+    .quantity-input-group,
+    .qty-btn {
+        display: none;
+    }
+
+    .addons-summary {
+        border: 1px solid #999;
+    }
+}

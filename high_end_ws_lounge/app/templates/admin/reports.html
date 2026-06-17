@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/reports.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-dark">Daily Reports & Analytics</h2>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body">
+            <form method="POST">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Start Date</label>
+                        <input type="date" name="start_date" class="form-control shadow-none" value="{{ start_date or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">End Date</label>
+                        <input type="date" name="end_date" class="form-control shadow-none" value="{{ end_date or '' }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-filter w-100 shadow-none">
+                            <i class="fas fa-filter me-1"></i> Filter Reports
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if customer_sessions %}
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body p-0">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center gap-2">
+
+                <h5 class="mb-0 fw-bold"><i class="fas fa-history me-2 text-primary"></i>Completed Sessions</h5>
+                <div class="d-flex align-items-center">
+                    <a
+                        href="{{ url_for('admin.generate_completed_sessions_pdf', start_date=(start_date if start_date else ''), end_date=(end_date if end_date else '')) }}"
+                        class="btn btn-pdf"
+                    >
+                        <i class="fas fa-file-pdf me-1"></i> Download Completed Sessions (PDF)
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle custom-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Contact</th>
+                            <th>Email Address</th>
+                            <th>Room</th>
+                            <th class="text-center">Pax</th>
+                            <th>Status</th>
+                            <th>Staff</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th class="text-end">Total Bill</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in customer_sessions %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ session.customer_name }}</td>
+                            <td>{{ session.contact_number or 'N/A' }}</td>
+                            <td>{{ session.user.email if session.user and session.user.email else 'N/A' }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ session.room.name if session.room else 'Unknown' }}</span></td>
+                            <td class="text-center">{{ session.pax_count or 0 }}</td>
+                            <td><span class="badge bg-success-soft">{{ session.status }}</span></td>
+                            <td>{{ session.approved_by.name if session.approved_by else (session.user.name if session.user else session.added_by or 'Unknown') }}</td>
+                            <td class="small">{{ session.start_time.strftime('%b %d, %Y %I:%M %p') }}</td>
+                            <td class="small">{{ session.end_time.strftime('%b %d, %Y %I:%M %p') if session.end_time else '---' }}</td>
+                            <td class="text-end fw-bold text-primary">PHP{{ '{:,.2f}'.format(session.total_amount or 0) }}</td>
+
+                        </tr>
+                        <tr class="note-row">
+                            <td colspan="10" class="bg-light-subtle py-2 ps-4">
+                                <small class="text-muted">
+                                    <i class="fas fa-sticky-note me-1"></i> <strong>Notes:</strong> {{ session.extra_notes or 'No notes' }} | <strong>Extra Fee:</strong> PHP{{ '{:,.2f}'.format(session.extra_fee or 0) }}
+
+                                </small>
+                                <div class="mt-2">
+                                    {# Add-ons summary (reservation or walk-in) if IDs exist in context #}
+                                    {% set rid = session.id if session is defined and session.id is defined else None %}
+                                    {% set addsum = (get_reservation_addons_summary(rid) if rid and get_reservation_addons_summary is defined else None) %}
+                                    {% if not addsum or not addsum.addons %}
+                                        {# fallback: walk-in id may be available as walkin_reservation_id or walkin_id #}
+                                        {% set wid = session.walkin_reservation_id if session is defined and session.walkin_reservation_id is defined else (session.walkin_id if session is defined and session.walkin_id is defined else None) %}
+                                        {% set addsum = (get_walkin_addons_summary(wid) if wid and get_walkin_addons_summary is defined else None) %}
+                                    {% endif %}
+                                    {% if addsum and addsum.addons %}
+                                        <div><strong>Add-ons:</strong></div>
+                                        {% for a in addsum.addons %}
+                                            <div>{{ a.name }} ({{ a.quantity }} {{ 'pc' if a.quantity == 1 else 'pcs' }}) = PHP{{ '{:,.0f}'.format(a.subtotal or 0) }}</div>
+
+                                        {% endfor %}
+                                        <div class="fw-bold">Total Add-ons = PHP{{ '{:,.2f}'.format(addsum.total or 0) }}</div>
+
+                                    {% else %}
+                                        <span class="text-muted">Add-ons: None</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% elif start_date %}
+    <div class="card shadow-sm mb-4 border-0 text-center py-5">
+        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+        <p class="mb-0 text-muted">No completed sessions found for this date range.</p>
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="p-3 border-bottom">
+                <h5 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2 text-success"></i>Daily Analytics Summary</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle custom-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Report Date</th>
+                            <th class="text-center">Total Logins</th>
+                            <th class="text-center">Total Check-ins</th>
+                            <th>Member of the Day</th>
+                            <th>Generated At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in daily_reports %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ report.report_date.strftime('%B %d, %Y') }}</td>
+                            <td class="text-center"><span class="badge bg-info-soft text-info">{{ report.total_logins }}</span></td>
+                            <td class="text-center"><span class="badge bg-success-soft text-success">{{ report.total_check_ins }}</span></td>
+                            <td><i class="fas fa-user-star text-warning me-1"></i>{{ report.member_name or 'N/A' }}</td>
+                            <td class="text-muted">{{ report.generated_at.strftime('%I:%M %p') }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                No daily reports found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white text-center border-0 py-3">
+            <small class="text-muted">Data automatically stored upon session end.</small>
+        </div>
+    </div>
+</div>
+{% endblock %}

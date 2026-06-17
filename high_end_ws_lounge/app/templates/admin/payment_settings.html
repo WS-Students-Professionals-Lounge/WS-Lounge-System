@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_reservations_list.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card p-4 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-1">Payment Settings</h2>
+                <p class="text-muted">Manage GCash and Maya account details for customer downpayments.</p>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category=='danger' else 'success' if category=='success' else 'info' }}">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="row g-4">
+            {% for method in ['GCash', 'Maya'] %}
+            {% set info = payment_infos.get(method) %}
+            <div class="col-md-6">
+                <div class="card h-100 border-secondary">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ method }}</h5>
+                        <form method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="method" value="{{ method }}">
+
+                            <div class="mb-3">
+                                <label class="form-label">Account Name</label>
+                                <input type="text" name="account_name" class="form-control" value="{{ info.account_name if info else '' }}" placeholder="e.g. High End WS Lounge">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Account Number</label>
+                                <input type="text" name="account_number" class="form-control" value="{{ info.account_number if info else '' }}" placeholder="e.g. 0917XXXXXXX">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Instructions</label>
+                                <textarea name="instructions" class="form-control" rows="3" placeholder="Optional payment instructions">{{ info.instructions if info else '' }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Upload QR Code</label>
+                                <input type="file" name="qr_image" class="form-control">
+                            </div>
+                            {% if info and info.qr_image %}
+                            <div class="mb-3">
+                                <p class="mb-1"><strong>Current QR</strong></p>
+                                <img src="{{ url_for('static', filename='uploads/payment/' + info.qr_image) }}" alt="{{ method }} QR" class="img-fluid rounded" style="max-height: 220px;">
+                            </div>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary">Save {{ method }} Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

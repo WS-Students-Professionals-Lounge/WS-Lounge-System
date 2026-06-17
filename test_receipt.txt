@@ -1,0 +1,4 @@
+GCash Receipt
+Reference: TEST123456
+Amount: P35.00
+Status: Paid

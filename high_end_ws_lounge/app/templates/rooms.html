@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rooms_modern.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="rooms-container">
+    <h2 class="page-title">Rooms & Reservations</h2>
+    <p class="page-subtitle">Book your preferred space with ease</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="modern-alert alert-{{ 'danger' if category=='danger' else 'success' if category=='success' else 'info' }}">
+            {{ message }}
+            <button type="button" class="alert-dismiss">&times;</button>
+
+            {% if form.errors %}
+            <div class="modern-alert alert-danger">
+                {% for field, errors in form.errors.items() %}
+                    <strong>{{ field.replace('_', ' ').title() }}:</strong> {{ errors[0] }}<br>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+
+    <div class="rooms-flex">
+        <div class="rooms-sidebar">
+            <div class="room-list-card">
+                <h5 class="sidebar-section-title">Available Rooms</h5>
+                <ul class="room-list">
+                    {# Logic to ensure unique rooms are displayed in the sidebar #}
+                    {% set unique_rooms = [] %}
+                    {% for room in rooms %}
+                        {% if room.name not in unique_rooms and room.status.lower() == 'available' %}
+                            <li class="room-item">
+                                <div>
+                                    <div class="room-name">{{ room.name }}</div>
+                                    <div class="room-rate">₱{{ room.base_rate }}/hr</div>
+                                </div>
+                                <span class="room-status status-{{ room.status.lower() }}">
+                                    {{ room.status.title() }}
+                                </span>
+                            </li>
+                            {% set _ = unique_rooms.append(room.name) %}
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="reservation-form-card">
+            <h5 class="form-section-title">Reservation</h5>
+            <form method="POST" id="booking-form" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                {{ form.is_open_time(class="d-none", id="form-open-time") }}
+
+                <div class="form-grid">
+                    <div class="input-group-modern">
+                        {{ form.customer_name.label(class="form-label-modern") }}
+                        {{ form.customer_name(class="modern-input", placeholder="e.g Darwen Salcedo", required=True) }}
+                    </div>
+                    <div class="input-group-modern">
+                        {{ form.contact_number.label(class="form-label-modern") }}
+                        {{ form.contact_number(class="modern-input", placeholder="e.g 09121234567", required=True) }}
+                    </div>
+                </div>
+
+
+                <div class="form-grid">
+                    <div class="input-group-modern">
+                        {{ form.room_id.label(class="form-label-modern", text="Select Area") }}
+                        <select name="{{ form.room_id.name }}" class="modern-select" required id="room-selector">
+                            <option value="" disabled selected>Choose a room...</option>
+                            {% set unique_select = [] %}
+                            {% for room in rooms %}
+                                {% if room.name not in unique_select and room.status.lower() == 'available' %}
+                                    <option value="{{ room.id }}" data-rate="{{ room.base_rate }}">
+                                        {{ room.name }} (₱{{ room.base_rate }}/hr)
+                                    </option>
+                                    {% set _ = unique_select.append(room.name) %}
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="date-time-grid">
+                    <div class="input-group-modern">
+                        {{ form.start_time.label(class="form-label-modern", text="Start Date/Time") }}
+                        {{ form.start_time(class="modern-input", type="datetime-local", id="start-time") }}
+                    </div>
+                    <div class="input-group-modern">
+                        {{ form.end_time.label(class="form-label-modern", text="End Date/Time") }}
+                        {{ form.end_time(class="modern-input", type="datetime-local", id="end-time") }}
+                    </div>
+                    <div class="toggle-group">
+                        <label class="form-label-modern">Open Time</label>
+                        <label class="switch">
+                            <input type="checkbox" id="open-time-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+
+                <div class="notes-section">
+                    <h6 class="notes-title">STAFF NOTES & EXTRA FEES</h6>
+                    <div class="form-grid">
+                        <div class="input-group-modern">
+                            <label class="form-label-modern">Predefined Add-ons</label>
+                            <select id="extra-fees-select" name="predefined_addon_name" class="modern-select">
+                                <option value="None">None</option>
+                                <option value="Projector" data-unit-price="150">Projector (+₱150)</option>
+                                <option value="Extra Chairs" data-unit-price="50">Extra Chairs (+₱50 per chair)</option>
+                                <option value="Extension Cords" data-unit-price="100">Extension Cords (+₱100)</option>
+                                <option value="Whiteboard Set" data-unit-price="200">Whiteboard Set (+₱200)</option>
+                            </select>
+                        </div>
+                        <div class="input-group-modern">
+                            <label class="form-label-modern" for="addon-quantity">Quantity</label>
+                            <input type="number" id="addon-quantity" name="predefined_addon_qty" class="modern-input" min="1" value="1" step="1">
+                            <small class="text-muted">Empty value will be treated as 1.</small>
+                        </div>
+                        <input type="hidden" name="extra_fee_total" id="extra-fee-total" value="0">
+                        <div class="input-group-modern">
+                            {{ form.extra_notes.label(class="form-label-modern", text="Special Instructions") }}
+                            {{ form.extra_notes(class="modern-textarea modern-input", placeholder="Enter specific requests here...") }}
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="payment-section">
+                    <h6 class="notes-title">Payment Method</h6>
+                    <p class="small text-muted">
+                        Select your payment method and payment type. For downpayment, a 50% advance is required.
+                    </p>
+                    <div class="payment-method-grid">
+                        <label class="payment-method-option" for="pm-gcash">
+                            <input type="radio" name="payment_method" id="pm-gcash" value="GCash">
+                            <span>GCash</span>
+                        </label>
+                        <label class="payment-method-option" for="pm-maya">
+                            <input type="radio" name="payment_method" id="pm-maya" value="Maya">
+                            <span>Maya</span>
+                        </label>
+                    </div>
+
+                    <div id="payment-type-section" class="payment-type-section d-none">
+                        <h6 class="notes-title payment-type-title">Payment Type</h6>
+                        <div class="payment-type-grid">
+                            <label class="payment-type-option" for="pt-downpayment">
+                                <input type="radio" name="payment_type" id="pt-downpayment" value="Downpayment" checked>
+                                <span>Downpayment (50%)</span>
+                            </label>
+                            <label class="payment-type-option" for="pt-fullpayment">
+                                <input type="radio" name="payment_type" id="pt-fullpayment" value="Full Payment">
+                                <span>Full Payment</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="payment-info-panel" class="payment-info-panel d-none">
+                        <div class="payment-info-row">
+                            <strong id="payment-method-label"></strong>
+                        </div>
+                        <div class="payment-info-row">
+                            <small id="payment-instructions" class="text-muted"></small>
+                        </div>
+                        <div class="payment-info-row">
+                            <button type="button" id="show-payment-modal" class="modal-open-btn">View Payment QR & Details</button>
+                        </div>
+                    </div>
+
+                    <div id="payment-amount-display" class="payment-amount-display d-none">
+                        <div class="amount-row">
+                            <strong>Grand Total:</strong> <span id="display-total-amount">₱0.00</span>
+                        </div>
+                        <div class="amount-row d-none" id="downpayment-row">
+                            <strong>Downpayment Amount (50%):</strong> <span id="display-downpayment-amount">₱0.00</span>
+                        </div>
+                        <div class="amount-row d-none" id="fullpayment-row">
+                            <strong>Full Payment Amount:</strong> <span id="display-fullpayment-amount">₱0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="input-group-modern receipt-upload-group d-none" id="receipt-upload-section">
+                        <label class="form-label-modern" for="receipt-upload">Upload Receipt</label>
+                        <input type="file" name="receipt_image" id="receipt-upload" class="modern-input" accept="image/*,application/pdf">
+                        <small class="text-muted">Verify the amount matches the <strong id="receipt-amount-label">downpayment</strong> shown above.</small>
+                    </div>
+
+                    <div id="payment-modal" class="payment-modal-overlay d-none">
+                        <div class="payment-modal-content">
+                            <button type="button" class="modal-close" id="payment-modal-close">&times;</button>
+                            <h3 id="modal-payment-method" class="modal-title">Payment Details</h3>
+                            <p><strong>Account:</strong> <span id="modal-account-info"></span></p>
+                            <div class="modal-qr-row">
+                                <img id="modal-qr-image" src="" alt="QR Code" class="modal-qr-image d-none">
+                            </div>
+                            <p id="modal-instructions" class="modal-text"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Booking Summary Section -->
+                <div id="booking-summary-container" class="booking-summary-card d-none">
+                    <h6 class="summary-title">Booking Summary</h6>
+                    <div class="summary-details">
+                        <p>Selected Room: <span id="summary-room">-</span></p>
+                        <p>Duration: <span id="summary-hours">0</span> hour(s)</p>
+                        <p>Add-ons: <span id="summary-addons">None</span></p>
+                        <p>Total Cost: <span class="summary-price">₱<span id="summary-total">0.00</span></span></p>
+                        <p class="deposit-note d-none">Downpayment Due: <strong id="summary-deposit">₱0.00</strong></p>
+                    </div>
+                </div>
+
+                {% if current_user.is_authenticated and current_user.role != 'member' %}
+                    {{ form.submit(class="form-submit-btn", id="submit-booking", disabled="disabled") }}
+                {% else %}
+                    {{ form.submit(class="form-submit-btn", id="submit-booking") }}
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="bookings-section">
+        <div class="section-header-flex">
+            <h3 class="upcoming-title">Upcoming Bookings</h3>
+            <div class="table-filters">
+                <input type="date" id="filter-date" class="modern-input filter-input">
+                <select id="filter-status" class="modern-select filter-input">
+                    <option value="">All Status</option>
+                    <option value="Confirmed">Confirmed</option>
+                    <option value="Pending">Pending</option>
+                </select>
+                <button type="button" class="export-btn" id="export-csv">Export CSV</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="booking-table" id="bookings-table">
+                <thead>
+                    <tr>
+                        <th>Rooms</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if bookings %}
+                        {% for booking in bookings %}
+                        <tr class="booking-row" data-status="{{ booking[2] }}" data-date="{{ booking[0] }}">
+                            <td>{{ booking[3] }}</td>
+                            <td>{{ booking[0] }}</td>
+                            <td>{{ booking[1] }}</td>
+                            <td><span class="booking-status status-{{ booking[2].lower() }}">{{ booking[2] }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr class="empty-row">
+                            <td colspan="4">No upcoming bookings found.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<script type="application/json" id="paymentInfoData">{{ payment_info | tojson | safe }}</script>
+<div id="currentUserRole" data-role="{{ current_user.role }}" hidden></div>
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/rooms.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard/member_dashboard.css') }}?v=9">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <div>
+            <h1 class="page-title">Member Dashboard</h1>
+            <h2 id="welcomeText" class="welcome-text" aria-live="polite">Welcome Back, <span id="userName">{{ current_user.name }}</span>!</h2>
+        </div>
+        <div id="dashboardClock" class="dashboard-clock" role="timer" aria-label="Current Time">00:00:00</div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="member-stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="far fa-calendar-check" aria-hidden="true"></i></div>
+            <div class="stat-number">{{ reservations|length|default(0) }}</div>
+            <div class="stat-label">Total Reservations</div>
+        </div>
+
+        {# Issue #1: Hide field if no plan exists #}
+        {% if remaining_days and remaining_days != 'N/A' %}
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-star" aria-hidden="true"></i></div>
+            <div class="stat-number">{{ remaining_days }}</div>
+            <div class="stat-label">Plan Days Left</div>
+        </div>
+        {% endif %}
+
+        <div class="stat-card">
+            <div class="stat-icon"><i class="far fa-clock" aria-hidden="true"></i></div>
+            {# Issue #2: Reflecting accurate totals (backend logic handles the value, HTML displays it) #}
+            <div class="stat-number">{{ (active_plan.total_time // 60)|default(0) if active_plan else 0 }}hrs</div>
+            <div class="stat-label">Total Solo Hours</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-wallet" aria-hidden="true"></i></div>
+            <div class="stat-number">{{ solo_plans|length|default(0) }}</div>
+            <div class="stat-label">Solo Plans</div>
+        </div>
+    </div>
+
+    <!-- Membership Status Card -->
+    {% if membership %}
+    <div class="membership-status-card" id="membershipCard">
+        <div class="membership-header">
+            <div>
+                <h3 class="membership-title">✓ Official Member</h3>
+                <p class="membership-plan">{{ membership.plan_name or 'Standard Plan' }}</p>
+            </div>
+            <span class="membership-badge {% if membership.is_active %}active{% else %}expired{% endif %}">
+                {% if membership.is_active %}Active{% else %}Expired{% endif %}
+            </span>
+        </div>
+
+        <div class="membership-details-grid">
+            <div class="detail-item">
+                <label>Started On</label>
+                <div class="detail-value">{{ membership.start_date.strftime('%B %d, %Y %I:%M %p') if membership.start_date else 'N/A' }}</div>
+            </div>
+            <div class="detail-item">
+                <label>Expires On</label>
+                <div class="detail-value">{{ membership.expiry_date.strftime('%B %d, %Y %I:%M %p') if membership.expiry_date else 'N/A' }}</div>
+            </div>
+            <div class="detail-item">
+                <label>Countdown</label>
+                <div class="detail-value" id="membershipExpiryCountdown" data-expiry="{{ membership.expiry_date.isoformat() if membership.expiry_date else '' }}" data-membership-id="{{ membership.id }}">--:--:--</div>
+            </div>
+            <div class="detail-item">
+                <label>Remaining Hours</label>
+                <div class="detail-value hours-display" id="remainingHours">
+                    {% if membership.total_hours > 0 %}
+                        <span class="hours-value">{{ "%.2f"|format(membership.hours_left) }} hrs</span>
+                    {% else %}
+                        Unlimited
+                    {% endif %}
+                </div>
+            </div>
+            <div class="detail-item">
+                <label>Total Hours</label>
+                <div class="detail-value" id="totalHoursUsed">
+                    {% if membership.total_hours > 0 %}
+                        <span class="hours-value">{{ "%.2f"|format(membership.accumulated_hours) }} hrs</span>
+                    {% else %}
+                        Unlimited
+                    {% endif %}
+                </div>
+            </div>
+            <div class="detail-item">
+                <label>Status</label>
+                <div class="detail-value">
+                    {% if membership.is_checked_in %}
+                        <span class="badge bg-success">✓ Checked In</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Not Checked In</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Timer (if checked in) -->
+        {% if membership.is_checked_in %}
+        <div class="session-timer-container">
+            <div class="session-info">
+                <p class="session-label">Current Session Duration</p>
+                <div class="timer-display" id="sessionTimer">00:00:00</div>
+            </div>
+            <div class="session-info">
+                <p class="session-label">Hours Used So Far</p>
+                <div class="timer-display hours-spent" id="hoursSpent">0.00 hrs</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Attendance Records -->
+        {% if attendance_logs %}
+        <div class="attendance-records-container">
+            <h4 class="attendance-title">📋 Recent Attendance</h4>
+            <div class="attendance-table-wrapper">
+                <table class="attendance-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Check-In</th>
+                            <th>Check-Out</th>
+                            <th>Hours Used</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in attendance_logs[:10] %}
+                        <tr>
+                            <td>{{ log.check_in_time | format_date_time }}</td>
+                            <td>{{ log.check_in_time | format_checkin }}</td>
+                            <td>
+                                {% if log.check_out_time %}
+                                    {{ log.check_out_time | format_checkout }}
+                                {% else %}
+                                    <span class="badge bg-warning">In Progress</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.hours_deducted > 0 %}
+                                    <strong>{{ log.hours_deducted | format_hours }}</strong>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+{% endif %}
+
+    {# Issue #8: Search and Filter Bar #}
+    <div class="dashboard-controls">
+        <div class="search-filter-wrapper">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="reservationSearch" placeholder="Search by room or status..." aria-label="Search reservations">
+            </div>
+            <div class="filter-group">
+                <select id="statusFilter" aria-label="Filter by status">
+                    <option value="all">All Status</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="pending">Pending</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="ended">Ended</option>
+                </select>
+                <button id="exportCSV" class="btn-export" title="Export to CSV"><i class="fas fa-file-csv"></i> Export</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-main-content">
+        <!-- Recent Reservations Section -->
+        <div class="reservations-section">
+            <h4 class="section-title"><i class="fas fa-history"></i> Reservation History</h4>
+            {% if reservations %}
+            <div class="table-wrap">
+                <table class="modern-table" id="reservationTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Room</th>
+                            <th>Date & Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for res in reservations %}
+                        <tr>
+                            <td><strong>#{{ res.customer_id or res.id }}</strong></td>
+                            <td>{{ res.room.name if res.room else 'N/A' }}</td>
+                            <td>{{ res.start_time.strftime('%m/%d %I:%M %p') if res.start_time else '-' }}</td>
+                            <td>
+                                {# Issue #4: Status Badges with accessibility #}
+                                <span class="status-badge 
+                                    {% if res.status|lower == 'confirmed' %}badge-confirmed
+                                    {% elif res.status|lower == 'pending' %}badge-pending
+                                    {% elif res.status|lower == 'cancelled' %}badge-cancelled
+                                    {% elif res.status|lower == 'ended' or res.status|lower == 'checked-out' %}badge-ended
+                                    {% else %}badge-default{% endif %}">
+                                    {{ res.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="far fa-calendar-times"></i>
+                <p>No reservations yet. <a href="{{ url_for('main.rooms') }}">Make your first reservation</a></p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Solo Plans Section -->
+        <div class="solo-section">
+            <h4 class="section-title"><i class="fas fa-gem"></i> My Solo Plans</h4>
+            {% if solo_plans %}
+            {# Issue #7: Styled Cards for Solo Plans instead of plain table #}
+            <div class="solo-plans-grid">
+                {% for plan in solo_plans %}
+                <div class="solo-plan-card">
+                    <div class="plan-card-header">
+                        <span class="plan-id">#{{ plan.customer_id or plan.id }}</span>
+                        <span class="status-badge {% if plan.status == 'approved' %}badge-confirmed{% else %}badge-pending{% endif %}">
+                            {{ plan.status.title() }}
+                        </span>
+                    </div>
+                    <div class="plan-card-body">
+                        <h5>{{ plan.plan_name }}</h5>
+                        <p class="expiry"><i class="far fa-calendar-alt"></i> Expires: {{ plan.expiry_date.strftime('%m/%d %Y') if plan.expiry_date else '-' }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            {# Issue #7: Empty state styling #}
+            <div class="solo-plan-card empty-plan">
+                <div class="plan-card-body">
+                    <p>No solo plans yet.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    {# Issue #6 & #10: Accessibility and consistent styling #}
+    <div class="action-buttons">
+        <a href="{{ url_for('main.rooms') }}" class="modern-btn btn-primary-modern" aria-label="Create a new reservation">
+            <i class="fas fa-plus-circle"></i> New Reservation
+        </a>
+        <a href="{{ url_for('main.rooms') }}" class="modern-btn btn-primary-modern" aria-label="View available rooms">
+            <i class="fas fa-door-open"></i> View Rooms
+        </a>
+        <a href="{{ url_for('main.solo_rates') }}" class="modern-btn btn-primary-modern" aria-label="View solo plans">
+            <i class="fas fa-gem"></i> Solo Plans
+        </a>
+        <a href="{{ url_for('main.timelog') }}" class="modern-btn btn-primary-modern" aria-label="View your time logs">
+            <i class="fas fa-history"></i> Timelog
+        </a>
+    </div>
+</div>
+
+{# Issue #9: Notification/Reminders Toast Container #}
+<div id="notificationContainer" class="notification-container" aria-live="assertive"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard/member_dashboard.js') }}"></script>
+{% endblock %}

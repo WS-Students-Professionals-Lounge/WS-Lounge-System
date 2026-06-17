@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard/member_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <h1 class="page-title">Member Dashboard</h1>
+    
+    <!-- Membership Status Card -->
+    {% if membership %}
+    <div class="membership-card">
+        <h3>
+            <i class="fas fa-id-card"></i> {{ membership.plan_name }}
+            <span class="membership-status {% if membership.is_active %}active{% elif membership.status == 'pending' %}pending{% else %}expired{% endif %}">
+                {{ membership.status|title }}
+            </span>
+        </h3>
+
+        <div class="remaining-hours">
+            <div class="label">Remaining Hours</div>
+            <div class="remaining-hours-value" id="remaining-hours">{{ "%.2f"|format(membership.hours_left) }} hours</div>
+        </div>
+
+        <div class="membership-info-grid">
+            <div class="membership-info-item">
+                <div class="label">Valid From</div>
+                <div class="value">{{ membership.start_date.strftime('%b %d, %Y') }}</div>
+            </div>
+            <div class="membership-info-item">
+                <div class="label">Expires</div>
+                <div class="value">{{ membership.expiry_date.strftime('%b %d, %Y') }}</div>
+            </div>
+            <div class="membership-info-item">
+                <div class="label">Total Hours</div>
+                <div class="value">{{ "%.2f"|format(membership.total_hours) }} hrs</div>
+            </div>
+        </div>
+
+        <!-- Session Timer -->
+        {% if membership.is_checked_in %}
+        <div class="session-timer">
+            <div class="timer-label">⏱️ Current Session</div>
+            <div class="timer-display" id="session-timer">00:00:00</div>
+            <p class="session-note">Session running...</p>
+        </div>
+        {% else %}
+        <div class="session-timer">
+            <div class="timer-label">⏸️ Session Paused</div>
+            <div class="timer-display">00:00:00</div>
+            <p class="session-note">Check in at the admin desk to start your session</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Attendance Records -->
+    <div class="attendance-records">
+        <h4><i class="fas fa-history me-2"></i>Your Attendance Records</h4>
+        {% if attendance_logs %}
+        <div class="attendance-table">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th><i class="fas fa-calendar me-2"></i>Date</th>
+                        <th><i class="fas fa-sign-in-alt me-2"></i>Check-In</th>
+                        <th><i class="fas fa-sign-out-alt me-2"></i>Check-Out</th>
+                        <th><i class="fas fa-hourglass me-2"></i>Hours Consumed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in attendance_logs %}
+                    <tr>
+                        <td><strong>{{ log.check_in_time | format_date_time }}</strong></td>
+                        <td>{{ log.check_in_time | format_checkin }}</td>
+                        <td>
+                            {% if log.check_out_time %}
+                                {{ log.check_out_time | format_checkout }}
+                            {% else %}
+                                <span class="badge bg-warning">Still in lounge</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ log.hours_deducted | format_hours }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="no-data">
+            <div class="no-data-icon"><i class="fas fa-inbox"></i></div>
+            <p>No attendance records yet. Check in to start your session!</p>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <!-- No Membership Card -->
+    <div class="membership-card membership-card--empty">
+        <h3><i class="fas fa-star"></i> No Active Membership</h3>
+        <p class="membership-note">You don't have an active membership yet. Apply for a solo plan to get started!</p>
+        <a href="{{ url_for('main.solo_rates') }}" class="btn btn-light btn-lg membership-action-btn">
+            <i class="fas fa-arrow-right me-2"></i> Browse Solo Plans
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Stats Cards -->
+    <div class="member-stats-grid">
+        <div class="stat-card stats-reservations">
+            <div class="stat-icon">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="stat-number">{{ reservations|length|default(0) }}</div>
+            <div class="stat-label">Room Reservations</div>
+        </div>
+        <div class="stat-card stats-solo">
+            <div class="stat-icon">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="stat-number">{{ solo_plans|length|default(0) }}</div>
+            <div class="stat-label">Solo Plans</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="reservations-section">
+                <h3 class="section-title">Recent Room Reservations</h3>
+                {% if reservations %}
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-door-open me-2"></i>Room</th>
+                            <th><i class="fas fa-clock me-2"></i>Time</th>
+                            <th><i class="fas fa-info-circle me-2"></i>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for res in reservations %}
+                        <tr>
+                            <td>{{ res.room.name }}</td>
+                            <td>{{ res.start_time }} - {{ res.end_time }}</td>
+                            <td><span class="status-badge badge-success">{{ res.status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted text-center py-4">No recent reservations</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="reservations-section">
+                <h3 class="section-title">Solo Plans</h3>
+                {% if solo_plans %}
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>Plan</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in solo_plans %}
+                        <tr>
+                            <td>{{ plan.plan_name }}</td>
+                            <td>
+                                <span class="status-badge {% if plan.status=='approved' %}badge-success{% elif plan.status=='pending' %}badge-warning{% else %}badge-danger{% endif %}">
+                                    {{ plan.status.title() }}
+                                </span>
+                            </td>
+                            <td>{{ plan.created_at.strftime('%Y-%m-%d') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-4">No solo plans yet</p>
+                    <a href="{{ url_for('main.solo_rates') }}" class="modern-btn btn-primary-modern">Apply Now</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Session Timer - Update every second if member is checked in
+    {% if membership and membership.is_checked_in %}
+    (function() {
+        let seconds = 0;
+        const timerEl = document.getElementById('session-timer');
+        
+        // Update timer every second
+        setInterval(() => {
+            seconds++;
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            timerEl.textContent = 
+                String(hours).padStart(2, '0') + ':' +
+                String(mins).padStart(2, '0') + ':' +
+                String(secs).padStart(2, '0');
+        }, 1000);
+    })();
+    {% endif %}
+</script>
+{% endblock %}
+                    <td>{{ plan.plan_name }}</td>
+                    <td>
+                        <span class="status-badge {% if plan.status=='approved' %}badge-success{% elif plan.status=='pending' %}badge-warning{% else %}badge-danger{% endif %}">
+                            {{ plan.status.title() }}
+                        </span>
+                    </td>
+                    <td>{{ plan.created_at.strftime('%Y-%m-%d') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-star fa-3x text-muted mb-3"></i>
+            <p class="text-muted mb-4">No solo plans yet</p>
+            <a href="{{ url_for('main.solo_rates') }}" class="modern-btn btn-primary-modern">Apply Now</a>
+        </div>
+        {% endif %}
+    </div>
+
+
+</div>
+{% endblock %}
+

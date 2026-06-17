@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_reservations_list.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="reservations-container">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h2 class="reservations-title">Reservations List</h2>
+                <p class="text-muted">Manage confirmed and pending reservations. Use the separate confirmation page for pending approvals.</p>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <a href="{{ url_for('admin.admin_confirm_reservations') }}" class="btn btn-outline-primary">Confirm Reservation</a>
+                <input type="text" id="resSearch" class="form-control w-25" placeholder="Search customer or room...">
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table custom-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Customer</th>
+                        <th>Room</th>
+                        <th>Date & Time</th>
+                        <th>Status</th>
+                        <th>Payment</th>
+                        <th>Receipt</th>
+                        <th>Amount</th>
+                        <th>Added By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for res in reservations %}
+                    <tr>
+                        <td><strong>#{{ res.customer_id or res.id }}</strong></td>
+                        <td>
+                            <div class="fw-bold">{{ res.customer_name }}</div>
+                            <small class="text-muted">{{ res.address or 'No Address' }}</small>
+                        </td>
+                        <td>{{ res.room.name }}</td>
+                        <td>
+                            <div>{{ res.start_time.strftime('%b %d, %Y') }}</div>
+                            <small class="text-muted">{{ res.start_time.strftime('%I:%M %p') }} - {{ res.end_time.strftime('%I:%M %p') if res.end_time else 'Open' }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if res.status == 'Confirmed' else 'secondary' if res.status == 'Cancelled' else 'warning' }}">
+                                {{ res.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if res.payment_method %}
+                                <div>{{ res.payment_method }}</div>
+                                {% if res.payment_type == "Full Payment" %}
+                                    <small class="text-muted">Full Payment</small>
+                                    <div class="text-success">₱{{ "%.2f"|format(res.total_amount) }}</div>
+                                {% else %}
+                                    <small class="text-muted">Downpayment (50%)</small>
+                                    <div class="text-warning">₱{{ "%.2f"|format(res.amount_paid or 0) }}</div>
+                                    <small class="text-muted">Grand Total: ₱{{ "%.2f"|format(res.total_amount) }}</small>
+                                {% endif %}
+                                {% if res.paid %}
+                                    <div class="text-success fw-bold">✓ Full Paid</div>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if res.receipt_image %}
+                                <a href="#" class="receipt-link" data-img="{{ url_for('static', filename='uploads/receipts/' + res.receipt_image) }}">View Receipt</a>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold text-primary">₱{{ "%.2f"|format(res.total_amount) }}</td>
+                        <td>
+                            {% if res.user and res.user.role in ['admin', 'staff'] %}
+                                <small>{{ res.user.name }} (Staff)</small>
+                            {% elif res.user %}
+                                <small>{{ res.user.name }}</small>
+                            {% else %}
+                                <small>{{ res.added_by or 'Unknown' }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="text-muted small">
+                                    {# Add-ons summary (reservation) #}
+                                    {% set addsum = get_reservation_addons_summary(res.id) if get_reservation_addons_summary is defined else None %}
+                                    {% if addsum and addsum.addons %}
+                                        <div><strong>Add-ons:</strong></div>
+                                        {% for a in addsum.addons %}
+                                            <div>
+                                                {{ a.name }} ({{ a.quantity }} {{ 'pc' if a.quantity == 1 else 'pcs' }}) = ₱{{ '%.0f'|format(a.subtotal|float) if a.subtotal is not none else 0 }}
+                                            </div>
+                                        {% endfor %}
+                                        <div class="fw-bold">Total Add-ons = ₱{{ '%.2f'|format(addsum.total or 0) }}</div>
+                                    {% else %}
+                                        <span class="text-muted">Add-ons: None</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-1">
+                                    <form method="post" action="{{ url_for('admin.delete_reservation', res_id=res.id) }}" data-confirm="Are you sure you want to permanently delete this?">
+                                        <input type="hidden" name="next" value="{{ url_for('admin.admin_reservations_list') }}">
+                                        <button type="submit" class="btn-sm btn-danger">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="receipt-modal" class="receipt-modal-overlay d-none">
+        <div class="receipt-modal-content">
+            <button type="button" class="receipt-modal-close" id="receipt-modal-close">&times;</button>
+            <h3 class="receipt-modal-title">Receipt Preview</h3>
+            <img id="receipt-modal-image" src="" alt="Receipt Image" class="receipt-modal-image">
+            <p class="text-muted">If the receipt does not display, open it directly by right-clicking the link.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin/admin_reservations_list.js') }}"></script>
+{% endblock %}

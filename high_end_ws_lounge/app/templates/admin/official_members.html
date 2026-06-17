@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Official Members - Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/members.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid official-members-page">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-2">Official Members - Membership Management</h1>
+            <p class="text-muted mb-4">Manage active and pending memberships, check in/out members, and view attendance history.</p>
+        </div>
+    </div>
+
+    <!-- Search Box -->
+    <div class="search-box">
+        <input type="text" id="memberSearchInput" class="form-control" placeholder="🔍 Search by member name, email, or phone...">
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav member-tabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="active-tab" data-bs-toggle="tab" href="#active" role="tab">
+                <span class="badge bg-success me-2">{{ active_memberships|length }}</span> Active Members
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="pending-tab" data-bs-toggle="tab" href="#pending" role="tab">
+                <span class="badge bg-warning me-2">{{ pending_memberships|length }}</span> Pending Approval
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="expired-tab" data-bs-toggle="tab" href="#expired" role="tab">
+                <span class="badge bg-danger me-2">{{ expired_memberships|length }}</span> Expired
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Active Members Tab -->
+        <div class="tab-pane fade show active" id="active" role="tabpanel">
+            {% if active_memberships %}
+                <div class="members-container">
+                    {% for membership in active_memberships %}
+                    <div class="member-card active" id="card-{{ membership.id }}">
+                        <span class="member-status-badge active">Active</span>
+                        {% if membership.is_checked_in %}
+                        <span class="member-status-badge checked-in">✓ In Lounge</span>
+                        {% endif %}
+
+                        <div class="member-info">
+                            <div class="member-name">{{ membership.user.name }}</div>
+                            <p class="member-email">{{ membership.user.email }}</p>
+                            {% if membership.user.phone %}
+                            <p class="member-email">📞 {{ membership.user.phone }}</p>
+                            {% endif %}
+                            <p class="member-detail-note"><strong>Plan:</strong> {{ membership.plan_name or 'Standard' }}</p>
+
+                        <div class="card-buttons">
+                            <button class="btn btn-sm btn-toggle {% if membership.is_checked_in %}checked-in{% else %}btn-success{% endif %} btn-membership-toggle"
+                                    data-membership-id="{{ membership.id }}"
+                                    data-membership-name="{{ membership.user.name }}"
+                                    id="btn-{{ membership.id }}">
+                                <span id="btn-text-{{ membership.id }}">
+                                    {% if membership.is_checked_in %}
+                                        🛑 End Session
+                                    {% else %}
+                                        ✓ Check-In
+                                    {% endif %}
+                                </span>
+                            </button>
+                            <button class="btn btn-sm btn-info btn-history" data-membership-id="{{ membership.id }}" data-membership-name="{{ membership.user.name }}">
+                                📋 History
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>No active members at the moment.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Pending Members Tab -->
+        <div class="tab-pane fade" id="pending" role="tabpanel">
+            {% if pending_memberships %}
+                <div class="members-container">
+                    {% for membership in pending_memberships %}
+                    <div class="member-card pending" id="card-{{ membership.id }}">
+                        <span class="member-status-badge pending">⏳ Pending</span>
+
+                        <div class="member-info">
+                            <div class="member-name">{{ membership.user.name }}</div>
+                            <p class="member-email">{{ membership.user.email }}</p>
+                            <p class="member-detail-note"><strong>Plan Applied:</strong> {{ membership.plan_name or 'Standard' }}</p>
+                            <p><small>Applied: {{ membership.start_date.strftime('%b %d, %Y') }}</small></p>
+                        </div>
+
+                        <div class="member-hours">
+                            <div class="hours-label">Requested Hours</div>
+                            <div class="hours-value">{{ "%.2f"|format(membership.total_hours) }} hrs</div>
+                        </div>
+
+                        <div class="card-buttons">
+                            <button class="btn btn-sm btn-success btn-approve" data-membership-id="{{ membership.id }}" data-membership-name="{{ membership.user.name }}">
+                                ✓ Approve
+                            </button>
+                            <button class="btn btn-sm btn-danger btn-reject" data-membership-id="{{ membership.id }}" data-membership-name="{{ membership.user.name }}">
+                                ✗ Reject
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>No pending membership requests.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Expired Members Tab -->
+        <div class="tab-pane fade" id="expired" role="tabpanel">
+            {% if expired_memberships %}
+                <div class="members-container">
+                    {% for membership in expired_memberships %}
+                    <div class="member-card expired" id="card-{{ membership.id }}">
+                        <span class="member-status-badge expired">❌ Expired</span>
+
+                        <div class="member-info">
+                            <div class="member-name">{{ membership.user.name }}</div>
+                            <p class="member-email">{{ membership.user.email }}</p>
+                            <p class="member-detail-note"><strong>Plan:</strong> {{ membership.plan_name or 'Standard' }}</p>
+                        </div>
+
+                        <div class="member-hours">
+                            <div class="hours-label">Hours Used</div>
+                            <div class="hours-value">{{ "%.2f"|format(membership.total_hours - membership.hours_left) }} / {{ "%.2f"|format(membership.total_hours) }} hrs</div>
+                        </div>
+
+                        <div class="membership-dates">
+                            <p><strong>Expired:</strong> {{ membership.expiry_date.strftime('%b %d, %Y') }}</p>
+                        </div>
+
+                        <div class="card-buttons">
+                            <button class="btn btn-sm btn-primary btn-history" data-membership-id="{{ membership.id }}" data-membership-name="{{ membership.user.name }}">
+                                📋 View History
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">✓</div>
+                    <p>No expired members.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="historyTitle">Attendance History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body history-modal" id="historyContent">
+                <!-- Attendance table will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin/official_members.js') }}"></script>
+{% endblock %}

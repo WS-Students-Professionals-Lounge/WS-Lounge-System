@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/admin_reservations.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/addons.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rooms.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="reservation-page-admin-container1">
+  <div class="reservation-page-admin-thq-reservation-page-admin-elm">
+    
+    <div class="reservation-page-admin-thq-group42-elm">
+      
+      <div class="reservation-page-admin-thq-group41-elm">
+        
+        <div class="reservation-page-admin-thq-reservation-form-elm">
+          <span class="reservation-page-admin-thq-text-elm13">RESERVATION</span>
+          
+          <form id="resForm" method="POST" action="{{ url_for('admin.admin_reservations') }}">
+            {{ form.hidden_tag() }}
+
+            <div class="form-grid">
+                <div class="input-group-modern">
+                    <label class="form-label-modern">Customer Name</label>
+                    {{ form.customer_name(class_="modern-input", placeholder="e.g. Darwen Salcedo", id="customer_name") }}
+                </div>
+                <div class="input-group-modern">
+                    <label class="form-label-modern">Contact Number</label>
+                    {{ form.contact_number(class_="modern-input", placeholder="e.g. 0912-123-4567", id="contact_number") }}
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="input-group-modern">
+                    <label class="form-label-modern">Select Area</label>
+                    {{ form.room_id(class_="modern-select", id="room_id") }}
+                </div>
+            </div>
+
+
+            <div class="date-time-grid">
+                <div class="input-group-modern">
+                    <label class="form-label-modern">Start Date/Time</label>
+                    {{ form.start_time(class_="modern-input", type="datetime-local", id="start_time") }}
+                </div>
+                <div class="input-group-modern">
+                    <label class="form-label-modern">End Date/Time</label>
+                    {{ form.end_time(class_="modern-input", type="datetime-local", id="end_time") }}
+                </div>
+                <div class="toggle-group">
+                    <label class="form-label-modern">Open Time</label>
+                    <label class="switch">
+                        {{ form.open_time(id="openTimeToggle") }}
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+
+            <span class="reservation-page-admin-thq-text-elm14 section-title-break">STAFF NOTES & EXTRA FEES</span>
+
+            <!-- Predefined Add-ons -->
+            <div class="form-grid mt-20">
+                <div class="input-group-modern">
+                    <label class="form-label-modern">Predefined Add-ons</label>
+                    <select id="f-predefined-addon" name="predefined_addon_name" class="modern-select">
+                        <option value="None">None</option>
+                        <option value="Projector" data-unit-price="150">Projector (+₱150)</option>
+                        <option value="Extra Chairs" data-unit-price="50">Extra Chairs (+₱50 per chair)</option>
+                        <option value="Extension Cord" data-unit-price="100">Extension Cord (+₱100)</option>
+                        <option value="Whiteboard Set" data-unit-price="200">Whiteboard Set (+₱200)</option>
+                    </select>
+                </div>
+                <div class="input-group-modern">
+                    <label class="form-label-modern" for="f-predefined-addon-qty">Quantity</label>
+                    <input type="number" id="f-predefined-addon-qty" name="predefined_addon_qty" class="modern-input" min="1" value="1" step="1" placeholder="1">
+                    <small class="text-muted">Empty/invalid values become 1.</small>
+                </div>
+            </div>
+
+            <div class="reservation-page-admin-thq-group33-elm">
+                <span class="reservation-page-admin-thq-text-elm46">Selected Add-on Total:</span>
+                <span class="reservation-page-admin-thq-text-elm47 value-text" id="preview_addon_total_display">₱0.00</span>
+            </div>
+
+            <!-- Hidden fields for add-ons data (existing persistence) -->
+            {{ form.addons_json(id="addons_json") }}
+            {{ form.addon_subtotal(id="addon_subtotal") }}
+
+
+            <div class="reservation-page-admin-thq-pax-input-elm2 mt-20 partial-width">
+              <span class="reservation-page-admin-thq-text-elm29">Additional Fees (Non-Add-on)</span>
+              {{ form.extra_fee(class_="reservation-page-admin-thq-rectangle15-elm5 full-width-input", id="extra_fee_input", placeholder="0.00", type="number", step="0.01") }}
+            </div>
+
+
+            <input type="hidden" name="total_price" id="hidden_total_price" value="0">
+          </form>
+        </div>
+
+        <div class="reservation-page-admin-thq-reservation-details-elm">
+          <span class="reservation-page-admin-thq-text-elm31">RESERVATION DETAILS</span>
+          
+          <div class="summary-details-list">
+              <div class="reservation-page-admin-thq-group26-elm">
+                <span class="reservation-page-admin-thq-text-elm32">Customer Name:</span>
+                <span class="reservation-page-admin-thq-text-elm33 value-text" id="preview_name">----</span>
+              </div>
+              <div class="reservation-page-admin-thq-group27-elm">
+                <span class="reservation-page-admin-thq-text-elm34">Contact Number:</span>
+                <span class="reservation-page-admin-thq-text-elm35 value-text" id="preview_contact">----</span>
+              </div>
+              <div class="reservation-page-admin-thq-group28-elm">
+                <span class="reservation-page-admin-thq-text-elm36">Area:</span>
+                <span class="reservation-page-admin-thq-text-elm37 value-text" id="preview_room">----</span>
+              </div>
+              <div class="reservation-page-admin-thq-group29-elm">
+                <span class="reservation-page-admin-thq-text-elm38">Start Date:</span>
+                <span class="reservation-page-admin-thq-text-elm39 value-text" id="preview_date">----</span>
+              </div>
+              <div class="reservation-page-admin-thq-group29-elm">
+                <span class="reservation-page-admin-thq-text-elm38">Start Time:</span>
+                <span class="reservation-page-admin-thq-text-elm39 value-text" id="preview_start">----</span>
+              </div>
+              <div class="reservation-page-admin-thq-group30-elm">
+                <span class="reservation-page-admin-thq-text-elm40">End Time:</span>
+                <span class="reservation-page-admin-thq-text-elm41 value-text" id="preview_end">----</span>
+              </div>
+
+              <div class="reservation-page-admin-thq-group32-elm">
+                <span class="reservation-page-admin-thq-text-elm44">Duration:</span>
+                <span class="reservation-page-admin-thq-text-elm45 value-text" id="preview_duration">----</span>
+              </div>
+              <div class="reservation-page-admin-thq-group33-elm">
+                <span class="reservation-page-admin-thq-text-elm46">Additional Fees:</span>
+                <span class="reservation-page-admin-thq-text-elm47 value-text" id="preview_extra">----</span>
+              </div>
+
+              <div class="reservation-page-admin-thq-group33-elm">
+                <span class="reservation-page-admin-thq-text-elm46">Add-ons Subtotal:</span>
+                <span class="reservation-page-admin-thq-text-elm47 value-text" id="preview_addon_subtotal">----</span>
+              </div>
+
+
+              <div class="reservation-page-admin-thq-group33-elm discount-row">
+                <span class="reservation-page-admin-thq-text-elm46 discount-label">Discount:</span>
+                {{ form.discount(class_="discount-select", id="f-discount") }}
+              </div>
+          </div>
+
+          <div class="reservation-page-admin-thq-group36-elm">
+            <span class="reservation-page-admin-thq-text-elm51">TOTAL PAYABLE</span>
+            <span class="reservation-page-admin-thq-text-elm50" id="preview_total">₱0.00</span>
+            
+            <div class="action-buttons-wrapper">
+                <button type="button" class="reservation-page-admin-thq-button-elm1" id="confirmReservation">
+                  <span class="reservation-page-admin-thq-text-elm52">CONFIRM & SAVE</span>
+                </button>
+                <button type="button" class="reservation-page-admin-thq-button-elm2" id="cancelReservation">
+                  <span class="reservation-page-admin-thq-text-elm53">CANCEL</span>
+                </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin/admin_reservations.js') }}"></script>
+<script>
+    // Predefined Add-ons -> write to existing addons_json/addon_subtotal hidden fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const addonSelect = document.getElementById('f-predefined-addon');
+        const addonQtyInput = document.getElementById('f-predefined-addon-qty');
+        const addonsJsonField = document.getElementById('addons_json');
+        const addonSubtotalField = document.getElementById('addon_subtotal');
+        const previewAddonTotalDisplay = document.getElementById('preview_addon_total_display');
+
+        let addonNameToIdCache = null;
+
+        async function ensureAddonIdCache() {
+            if (addonNameToIdCache) return addonNameToIdCache;
+            try {
+                const res = await fetch('/api/addons', { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+                if (!res.ok) throw new Error('Failed to load addons');
+                const data = await res.json();
+                addonNameToIdCache = new Map((data.addons || []).map(a => [a.name, a.id]));
+                return addonNameToIdCache;
+            } catch (e) {
+                addonNameToIdCache = new Map();
+                return addonNameToIdCache;
+            }
+        }
+
+        function normalizeQty(raw) {
+            if (raw === null || raw === undefined) return 1;
+            if (typeof raw === 'string' && raw.trim() === '') return 1;
+            const n = parseInt(raw, 10);
+            if (!Number.isFinite(n) || n < 1) return 1;
+            return n;
+        }
+
+        function getSelectedAddonUnitPrice() {
+            if (!addonSelect) return 0;
+            const opt = addonSelect.options[addonSelect.selectedIndex];
+            return parseFloat(opt?.dataset?.unitPrice) || 0;
+        }
+
+        async function syncPredefinedAddonFields() {
+            const selected = (addonSelect?.value || 'None');
+            const qty = normalizeQty(addonQtyInput?.value);
+            if (addonQtyInput) addonQtyInput.value = qty;
+
+            if (!selected || selected === 'None') {
+                if (previewAddonTotalDisplay) previewAddonTotalDisplay.textContent = '₱0.00';
+                if (addonSubtotalField) addonSubtotalField.value = '0.00';
+                if (addonsJsonField) addonsJsonField.value = JSON.stringify([]);
+                if (document.getElementById('preview_addon_subtotal')) {
+                    document.getElementById('preview_addon_subtotal').textContent = '₱0.00';
+                }
+                if (typeof updateTotalPrice === 'function') updateTotalPrice();
+                return;
+            }
+
+            const cache = await ensureAddonIdCache();
+            const addonId = cache.get(selected);
+
+            const unitPrice = getSelectedAddonUnitPrice();
+            const subtotal = qty * unitPrice;
+
+            if (!addonId) {
+                if (previewAddonTotalDisplay) previewAddonTotalDisplay.textContent = '₱0.00';
+                if (addonSubtotalField) addonSubtotalField.value = '0.00';
+                if (addonsJsonField) addonsJsonField.value = JSON.stringify([]);
+                if (typeof updateTotalPrice === 'function') updateTotalPrice();
+                return;
+            }
+
+            if (previewAddonTotalDisplay) previewAddonTotalDisplay.textContent = '₱' + subtotal.toFixed(2);
+            if (addonSubtotalField) addonSubtotalField.value = subtotal.toFixed(2);
+            if (addonsJsonField) {
+                addonsJsonField.value = JSON.stringify([
+                    { addon_id: addonId, addon_name: selected, quantity: qty, unit_price: unitPrice, subtotal: subtotal }
+                ]);
+            }
+
+            if (document.getElementById('preview_addon_subtotal')) {
+                document.getElementById('preview_addon_subtotal').textContent = '₱' + subtotal.toFixed(2);
+            }
+
+            if (typeof updateTotalPrice === 'function') updateTotalPrice();
+        }
+
+        if (addonSelect) addonSelect.addEventListener('change', syncPredefinedAddonFields);
+        if (addonQtyInput) addonQtyInput.addEventListener('input', syncPredefinedAddonFields);
+
+        syncPredefinedAddonFields();
+    });
+</script>
+
+{% endblock %}

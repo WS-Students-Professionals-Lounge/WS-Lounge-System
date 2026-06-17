@@ -1,0 +1,530 @@
+/* =========================================
+   WS LOUNGE PRO - ADMIN RESERVATION PAGE
+   Modern Design with Brand Colors
+   ========================================= */
+
+:root {
+    /* Color Palette */
+    --color-white: #ffffff;
+    --color-bg: #ffffff;
+    --color-light-blue: #e6f0fa;
+    --color-dark-blue: #1f4e79;
+    --color-medium-blue: #3a6ea5;
+    --color-success: #28a745;
+    --color-danger: #dc3545;
+    --color-warning: #ffc107;
+    
+    /* Neutral Colors */
+    --color-border: #dce3eb;
+    --color-text-muted: #6b7280;
+    --color-text-neutral: #333333;
+    --color-text-light: #9ca3af;
+    
+    /* Typography */
+    --font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-size-heading: 1.25rem;
+    --font-size-label: 0.85rem;
+    --font-size-body: 0.95rem;
+}
+
+/* Base Styles */
+* {
+    font-family: var(--font-family);
+}
+
+.reservation-page-admin-container1 {
+    width: 100%;
+    display: flex;
+    min-height: 100vh;
+    align-items: center;
+    flex-direction: column;
+    box-sizing: border-box;
+    background-color: var(--color-bg);
+}
+
+/* Sidebar & Wrapper Alignment */
+.sidebar-layout .main-wrapper {
+    padding: 0 !important;
+    width: calc(100% - 280px) !important;
+    margin-left: 280px !important;
+}
+
+.sidebar-layout .content-container {
+    max-width: 100% !important;
+    margin: 0 !important;
+}
+
+.reservation-page-admin-thq-reservation-page-admin-elm {
+    width: 100%;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    align-items: flex-start;
+    margin: 0;
+    padding: 0;
+}
+
+/* Background Section */
+.reservation-page-admin-thq-group42-elm {
+    width: 100% !important;
+    min-height: 100vh;
+    background: var(--color-bg) !important; 
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.reservation-page-admin-thq-group41-elm {
+    background-color: transparent !important;
+    display: flex;
+    width: 100%;
+    padding: 46px 50px;
+    gap: 30px;
+    align-items: flex-start; 
+    justify-content: center;
+}
+
+/* --- Left Card (Form Area) --- */
+.reservation-page-admin-thq-reservation-form-elm {
+    width: min(760px, 82vw);
+    max-width: 780px;
+    min-height: 850px; 
+    background: var(--color-white);
+    border-radius: 8px;
+    padding: 35px;
+    box-sizing: border-box;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;
+}
+
+/* --- Right Card (Summary Area) --- */
+.reservation-page-admin-thq-reservation-details-elm {
+    width: min(560px, 70vw);
+    min-height: 850px; 
+    background: var(--color-white);
+    border-radius: 8px;
+    padding: 35px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;
+}
+
+/* Titles */
+.reservation-page-admin-thq-text-elm13, 
+.reservation-page-admin-thq-text-elm31 {
+    font-size: var(--font-size-heading);
+    font-weight: 700;
+    color: var(--color-dark-blue);
+    margin-bottom: 30px;
+    display: block;
+}
+
+.section-title-break {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-dark-blue);
+    margin: 35px 0 20px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-top: 1px solid var(--color-border);
+    padding-top: 25px;
+    display: block;
+}
+
+/* Grid Layouts */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.date-time-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.input-grid-wrapper {
+    display: flex;
+    gap: 25px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.flex-1 { flex: 1; }
+.flex-0-5 { flex: 0.5; }
+.full-width { width: 100%; }
+.partial-width { width: 100%; }
+
+/* Input Group Container */
+.input-group-modern {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+/* Labels */
+.form-label-modern,
+.reservation-page-admin-thq-text-elm16,
+.reservation-page-admin-thq-text-elm18,
+.reservation-page-admin-thq-text-elm20,
+.reservation-page-admin-thq-text-elm22,
+.reservation-page-admin-thq-text-elm23,
+.reservation-page-admin-thq-text-elm25,
+.reservation-page-admin-thq-text-elm28,
+.reservation-page-admin-thq-text-elm29,
+.reservation-page-admin-thq-text-elm27 {
+    font-size: var(--font-size-label);
+    font-weight: 600;
+    color: var(--color-dark-blue);
+    display: block;
+}
+
+/* Modern Input Styling */
+.modern-input,
+.modern-select,
+.full-width-input {
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: var(--font-size-body);
+    background: var(--color-white);
+    outline: none;
+    transition: all 0.3s ease;
+    color: var(--color-text-neutral);
+    box-sizing: border-box;
+    font-family: var(--font-family);
+}
+
+.modern-input::placeholder,
+.modern-select::placeholder {
+    color: var(--color-text-muted);
+}
+
+.modern-input:focus,
+.modern-select:focus,
+.full-width-input:focus {
+    border-color: var(--color-dark-blue);
+    background: var(--color-white);
+    box-shadow: 0 0 0 3px rgba(31, 78, 121, 0.1);
+}
+
+/* Select Dropdown */
+.modern-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 20px;
+    padding-right: 36px;
+    cursor: pointer;
+}
+
+.modern-select option {
+    background: var(--color-white);
+    color: var(--color-text-neutral);
+}
+
+/* Textarea */
+.textarea-input {
+    height: 100px;
+    resize: none;
+    line-height: 1.5;
+    padding: 12px 14px;
+    font-family: var(--font-family);
+}
+
+/* PAX Counter */
+.pax-counter {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--color-white);
+}
+
+.pax-btn {
+    width: 40px;
+    height: 42px;
+    border: none;
+    background: var(--color-light-blue);
+    color: var(--color-dark-blue);
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pax-btn:hover {
+    background: var(--color-dark-blue);
+    color: var(--color-white);
+}
+
+.pax-input {
+    flex: 1;
+    border: none;
+    text-align: center;
+    font-size: var(--font-size-body);
+    font-weight: 600;
+    color: var(--color-text-neutral);
+    background: transparent;
+    outline: none;
+}
+
+/* Toggle Switch */
+.toggle-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 28px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--color-success);
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+/* Discount Select */
+.discount-select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--color-white);
+    color: var(--color-text-neutral);
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-size: var(--font-size-body);
+    transition: all 0.3s ease;
+}
+
+.discount-select:focus {
+    border-color: var(--color-dark-blue);
+    outline: none;
+}
+
+/* Receipt/Summary List */
+.summary-details-list { 
+    flex: 1;
+    padding: 0;
+}
+
+.summary-details-list > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: var(--font-size-body);
+}
+
+.summary-details-list span {
+    font-weight: 600;
+    color: var(--color-text-neutral);
+}
+
+.value-text {
+    color: var(--color-dark-blue);
+    font-weight: 700;
+    text-align: right;
+}
+
+.discount-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.discount-row .discount-label {
+    font-weight: 600;
+    color: var(--color-text-neutral);
+}
+
+
+/* Total Section */
+.reservation-page-admin-thq-group36-elm {
+    margin-top: auto; 
+    background: var(--color-light-blue);
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid var(--color-border);
+}
+
+.reservation-page-admin-thq-text-elm51 {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--color-dark-blue);
+    margin-bottom: 12px;
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.reservation-page-admin-thq-text-elm50 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--color-dark-blue);
+    margin-bottom: 25px;
+    display: block;
+}
+
+/* Action Buttons */
+.action-buttons-wrapper {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+.reservation-page-admin-thq-button-elm1 {
+    flex: 1.3;
+    background: var(--color-dark-blue);
+    border: none;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--color-white);
+    font-size: var(--font-size-body);
+    transition: all 0.3s ease;
+}
+
+.reservation-page-admin-thq-button-elm1:hover {
+    background: var(--color-medium-blue);
+    box-shadow: 0 2px 8px rgba(31, 78, 121, 0.2);
+}
+
+.reservation-page-admin-thq-button-elm1:active {
+    transform: translateY(1px);
+}
+
+.reservation-page-admin-thq-button-elm2 {
+    flex: 0.7;
+    background: var(--color-light-blue);
+    color: var(--color-dark-blue);
+    border: 1px solid var(--color-border);
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: var(--font-size-body);
+    transition: all 0.3s ease;
+}
+
+.reservation-page-admin-thq-button-elm2:hover {
+    background: var(--color-border);
+    border-color: var(--color-dark-blue);
+}
+
+.reservation-page-admin-thq-button-elm2:active {
+    transform: translateY(1px);
+}
+
+/* Utility Spacing */
+.mt-30 { margin-top: 30px; }
+.mt-20 { margin-top: 20px; }
+
+/* Responsive Design */
+@media (max-width: 1320px) {
+    .reservation-page-admin-thq-reservation-page-admin-elm {
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+        padding-bottom: 40px;
+    }
+
+    .reservation-page-admin-thq-reservation-form-elm,
+    .reservation-page-admin-thq-reservation-details-elm {
+        width: min(95%, 770px);
+        min-height: auto;
+    }
+
+    .form-grid,
+    .date-time-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .reservation-page-admin-thq-group41-elm {
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .reservation-page-admin-thq-reservation-form-elm,
+    .reservation-page-admin-thq-reservation-details-elm {
+        width: 100%;
+        padding: 24px;
+        min-height: auto;
+    }
+
+    .form-grid,
+    .date-time-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .action-buttons-wrapper {
+        flex-direction: column;
+    }
+
+    .reservation-page-admin-thq-button-elm1,
+    .reservation-page-admin-thq-button-elm2 {
+        flex: 1;
+    }
+
+    .modern-input,
+    .modern-select,
+    .full-width-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+}
