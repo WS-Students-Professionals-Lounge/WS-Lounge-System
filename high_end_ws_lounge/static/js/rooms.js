@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // 2. Open Time Toggle Logic (Existing)
     const openTimeToggle = document.getElementById('open-time-toggle');
     const endTimeInput = document.getElementById('end-time');
+    const durationSelect = document.getElementById('duration-select');
+    const endDisplay = document.getElementById('end-display');
     const hiddenOpenTime = document.getElementById('form-open-time');
 
     if (openTimeToggle && endTimeInput) {
@@ -16,6 +18,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 endTimeInput.style.pointerEvents = "none";
                 endTimeInput.required = false;
                 endTimeInput.value = ""; 
+                if (endDisplay) {
+                    endDisplay.value = '';
+                }
                 calculateTotal();
             } else {
                 endTimeInput.style.opacity = "1";
@@ -203,7 +208,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const endVal = endTimeInput.value;
 
 
-        const addonPrice = parseFloat(extraFeesSelect.value) || 0;
+        const selectedAddonOption = extraFeesSelect?.options[extraFeesSelect.selectedIndex];
+        const addonPrice = parseFloat(selectedAddonOption?.dataset.unitPrice || extraFeesSelect?.value || 0) || 0;
         const quantity = Math.max(0, parseInt(addonQuantityInput.value) || 0);
         const extraFeeTotal = addonPrice * quantity;
 
@@ -211,7 +217,21 @@ document.addEventListener('DOMContentLoaded', function() {
             extraFeeTotalInput.value = extraFeeTotal.toFixed(2);
         }
 
-        if (selectedRoom.value && startVal && (endVal || openTimeToggle.checked)) {
+        if (startVal && !openTimeToggle.checked && durationSelect?.value) {
+            const start = new Date(startVal);
+            const end = new Date(start.getTime() + (parseFloat(durationSelect.value) || 1) * 3600 * 1000);
+            if (endDisplay) {
+                endDisplay.value = end.toISOString().slice(0, 16);
+            }
+            if (endTimeInput) {
+                endTimeInput.value = end.toISOString().slice(0, 16);
+            }
+        } else if (openTimeToggle.checked) {
+            if (endDisplay) endDisplay.value = '';
+            if (endTimeInput) endTimeInput.value = '';
+        }
+
+        if (selectedRoom.value && startVal && (durationSelect?.value || openTimeToggle.checked)) {
             const rate = parseFloat(selectedRoom.getAttribute('data-rate'));
             let hours = 1;
 
@@ -221,6 +241,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const diffMs = end - start;
                 const diffHrs = diffMs / (1000 * 60 * 60);
                 hours = diffHrs > 0 ? diffHrs : 1;
+            } else if (!openTimeToggle.checked && durationSelect?.value) {
+                hours = parseFloat(durationSelect.value) || 1;
             }
 
             const total = (rate * hours) + extraFeeTotal;
@@ -254,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Listeners for Live Calculation
-    [roomSelector, startTimeInput, endTimeInput, extraFeesSelect, addonQuantityInput].forEach(el => {
+    [roomSelector, startTimeInput, endTimeInput, durationSelect, extraFeesSelect, addonQuantityInput].forEach(el => {
         if (!el) return;
         el.addEventListener('change', calculateTotal);
     });

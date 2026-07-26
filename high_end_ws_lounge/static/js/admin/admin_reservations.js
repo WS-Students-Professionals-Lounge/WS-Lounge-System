@@ -5,7 +5,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const roomId = document.getElementById('room_id');
 
     const startTime = document.getElementById('start_time');
+    const durationSelect = document.getElementById('duration-select');
     const endTime = document.getElementById('end_time');
+    const endDisplay = document.getElementById('end-display');
     const extraFeeInput = document.getElementById('extra_fee_input');
     const openTimeToggle = document.getElementById('openTimeToggle');
     const discountSelect = document.getElementById('f-discount');
@@ -63,8 +65,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (openTimeToggle && openTimeToggle.checked) {
             if (previewEnd) previewEnd.innerText = 'OPEN TIME';
             duration = 1;
+        } else if (!openTimeToggle.checked && durationSelect && durationSelect.value && startTime && startTime.value) {
+            if (previewEnd) {
+                const start = new Date(startTime.value);
+                const end = new Date(start.getTime() + (parseFloat(durationSelect.value) || 1) * 3600 * 1000);
+                previewEnd.innerText = formatDateTime(end.toISOString().slice(0, 16));
+            }
+            if (endTime) {
+                const val = startTime.value ? new Date(new Date(startTime.value).getTime() + (parseFloat(durationSelect.value) || 1) * 3600 * 1000).toISOString().slice(0, 16) : '';
+                endTime.value = val;
+                if (endDisplay) endDisplay.value = val;
+            }
+            duration = parseFloat(durationSelect.value) || 1;
         } else if (endTime && endTime.value) {
             if (previewEnd) previewEnd.innerText = formatDateTime(endTime.value);
+            if (endDisplay) endDisplay.value = endTime.value;
             const start = new Date(startTime.value);
             const end = new Date(endTime.value);
             duration = (end - start) / (1000 * 60 * 60);
@@ -90,6 +105,15 @@ document.addEventListener('DOMContentLoaded', function() {
             roomCost = roomCost * (1 - discountPercent);
             total = roomCost + extraFee + addonSubtotal;
         }
+
+        console.debug('[admin-reservation-total]', {
+            room_charge: baseRate,
+            duration_hours: duration,
+            addon_subtotal: addonSubtotal,
+            additional_fees: extraFee,
+            discount: discountPercent,
+            total_payable: total,
+        });
 
         if (previewTotal) {
             previewTotal.innerText = '₱' + total.toLocaleString(undefined, { minimumFractionDigits: 2 });
@@ -141,6 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 endTime.value = '';
                 endTime.style.opacity = '0.5';
                 endTime.required = false;
+                if (endDisplay) endDisplay.value = '';
                 startRunningTimer();
             } else {
                 endTime.disabled = false;
@@ -163,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-    [customerName, contactNumber, roomId, startTime, endTime, extraFeeInput, discountSelect].forEach(el => {
+    [customerName, contactNumber, roomId, startTime, endTime, durationSelect, extraFeeInput, discountSelect].forEach(el => {
 
 
 

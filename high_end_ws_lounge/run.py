@@ -98,6 +98,13 @@ def create_app(config_class=Config):
                 db.session.execute(text("ALTER TABLE reservations ADD COLUMN receipt_image VARCHAR(255)"))
             if "approved_by_id" not in columns:
                 db.session.execute(text("ALTER TABLE reservations ADD COLUMN approved_by_id INTEGER"))
+            if "addon_subtotal" not in columns:
+                db.session.execute(text("ALTER TABLE reservations ADD COLUMN addon_subtotal FLOAT DEFAULT 0.0"))
+
+            if inspector.has_table("walkin_reservations"):
+                walkin_columns = {column["name"] for column in inspector.get_columns("walkin_reservations")}
+                if "addon_subtotal" not in walkin_columns:
+                    db.session.execute(text("ALTER TABLE walkin_reservations ADD COLUMN addon_subtotal FLOAT DEFAULT 0.0"))
 
             if inspector.has_table("solo_plans"):
                 solo_columns = {column["name"] for column in inspector.get_columns("solo_plans")}

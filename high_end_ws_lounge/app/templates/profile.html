@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile - WS Lounge{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper profile-page-shell">
+    <div class="profile-page-header">
+        <div>
+            <h1>My Profile</h1>
+            <p class="welcome-text">Keep your account details current and update your password securely.</p>
+        </div>
+        <div class="profile-pill">Account Settings</div>
+    </div>
+
+    <div class="profile-shell">
+        <div class="profile-card profile-summary">
+            <h2>Profile Information</h2>
+            <div class="summary-label">Full Name</div>
+            <div class="summary-value">{{ current_user.name }}</div>
+            <div class="summary-label">Email Address</div>
+            <div class="summary-value">{{ current_user.email }}</div>
+            <div class="summary-label">Contact Number</div>
+            <div class="summary-value">{{ current_user.phone or 'Not provided' }}</div>
+            <div class="profile-summary-meta">
+                <strong>Member account</strong> • Updated through your secure profile settings
+            </div>
+        </div>
+
+        <div class="profile-card">
+            <h3>Update Your Details</h3>
+            <form method="post" novalidate>
+                {{ profile_form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ profile_form.name.label(class="form-label") }}
+                    {{ profile_form.name(class="form-control", placeholder="Enter your full name") }}
+                    {% for error in profile_form.name.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ profile_form.email.label(class="form-label") }}
+                    {{ profile_form.email(class="form-control", placeholder="Enter your email address") }}
+                    {% for error in profile_form.email.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ profile_form.phone.label(class="form-label") }}
+                    {{ profile_form.phone(class="form-control", placeholder="Enter your contact number") }}
+                    {% for error in profile_form.phone.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="d-grid gap-2">
+                    {{ profile_form.profile_submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+
+        <div class="profile-card">
+            <h3>Change Password</h3>
+            <form method="post" novalidate>
+                {{ password_form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ password_form.current_password.label(class="form-label") }}
+                    {{ password_form.current_password(class="form-control", placeholder="Enter your current password") }}
+                    {% for error in password_form.current_password.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ password_form.new_password.label(class="form-label") }}
+                    {{ password_form.new_password(class="form-control", placeholder="Enter a new password") }}
+                    {% for error in password_form.new_password.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ password_form.confirm_password.label(class="form-label") }}
+                    {{ password_form.confirm_password(class="form-control", placeholder="Confirm your new password") }}
+                    {% for error in password_form.confirm_password.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="d-grid gap-2">
+                    {{ password_form.password_submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

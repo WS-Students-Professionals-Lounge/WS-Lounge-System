@@ -64,14 +64,14 @@ body {
     padding: 28px 20px;
     border-radius: var(--radius);
     text-align: center;
-    box-shadow: var(--shadow-subtle);
-    border: 1px solid #eef2f8;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
+    border: 1px solid #bbc5d1;
     transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .log-stat-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
 }
 
 .stat-icon-circle {
@@ -104,10 +104,10 @@ body {
     background: var(--card-white);
     border-radius: var(--radius);
     padding: 32px;
-    box-shadow: var(--shadow-subtle);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
     position: relative;
     margin-bottom: 32px;
-    border: 1px solid #eef2f8;
+    border: 1px solid #bbc5d1;
 }
 
 .clock-display {
@@ -170,14 +170,14 @@ body {
     background: var(--card-white);
     border-radius: var(--radius);
     padding: 22px;
-    border-left: 4px solid var(--accent);
-    box-shadow: var(--shadow-subtle);
+    border: 1px solid #bbc5d1;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
     transition: transform 0.14s ease, box-shadow 0.14s ease;
 }
 
 .history-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
 }
 
 .history-header {

@@ -33,7 +33,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const fContact = document.getElementById('f-contact');
     const fArea = document.getElementById('f-area');
     const fStartTime = document.getElementById('f-start-time');
+    const fDurationSelect = document.getElementById('f-duration-select');
     const fEndTime = document.getElementById('f-end-time');
+    const fEndDisplay = document.getElementById('f-end-display');
     const fOpenTime = document.getElementById('f-open-time');
     const fFees = document.getElementById('f-fees');
     const fDiscount = document.getElementById('f-discount');
@@ -110,19 +112,25 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const cache = await ensureAddonIdCache();
-        const addonId = cache.get(result.addonName);
-
-        // If cache misses, still prevent invalid JSON payloads: store empty.
-        if (!addonId) {
-            addonSubtotalField.value = '0.00';
-            addonsJsonField.value = JSON.stringify([]);
-            return;
-        }
-
         const qty = normalizeAddonQty(predefinedAddonQtyInput?.value);
         const unitPrice = result.unitPrice;
         const subtotal = qty * unitPrice;
+
+        const cache = await ensureAddonIdCache();
+        const addonId = cache.get(result.addonName);
+
+        if (!addonId) {
+            addonsJsonField.value = JSON.stringify([
+                {
+                    addon_name: result.addonName,
+                    quantity: qty,
+                    unit_price: unitPrice,
+                    subtotal: subtotal,
+                },
+            ]);
+            addonSubtotalField.value = subtotal.toFixed(2);
+            return;
+        }
 
         addonsJsonField.value = JSON.stringify([
             {
@@ -162,6 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (pStart) pStart.textContent = fStartTime?.value ? fStartTime.value.replace('T', ' ') : 'Now';
 
         const extraFee = parseFloat(fFees?.value) || 0;
+        const addonSubtotal = parseFloat(addonSubtotalField?.value || 0) || 0;
         if (pFeesDisplay) pFeesDisplay.textContent = '₱' + extraFee.toFixed(2);
 
         let total = 0;
@@ -170,6 +179,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (fOpenTime?.checked) {
             if (pEnd) pEnd.textContent = 'OPEN TIME';
             duration = 1;
+        } else if (fStartTime?.value && fDurationSelect?.value) {
+            const start = new Date(fStartTime.value);
+            const durationHours = parseFloat(fDurationSelect.value) || 1;
+            const end = new Date(start.getTime() + durationHours * 3600 * 1000);
+            if (pEnd) pEnd.textContent = end.toISOString().slice(0, 16).replace('T', ' ');
+            if (fEndTime) fEndTime.value = end.toISOString().slice(0, 16);
+            if (fEndDisplay) fEndDisplay.value = end.toISOString().slice(0, 16);
+            duration = durationHours;
         } else if (fStartTime?.value && fEndTime?.value) {
             if (pEnd) pEnd.textContent = fEndTime.value.replace('T', ' ');
             const s = new Date(fStartTime.value);
@@ -194,11 +211,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (fOpenTime?.checked) {
             let roomCost = baseRate * (1 - discount);
-            total = roomCost + extraFee;
+            total = roomCost + extraFee + addonSubtotal;
         } else {
             let roomCost = baseRate * duration * (1 - discount);
-            total = roomCost + extraFee;
+            total = roomCost + extraFee + addonSubtotal;
         }
+
+        console.debug('[admin-walkin-total]', {
+            room_charge: baseRate,
+            duration_hours: duration,
+            addon_subtotal: addonSubtotal,
+            additional_fees: extraFee,
+            discount: discount,
+            total_payable: total,
+        });
 
         if (pTotal) {
             const label = fOpenTime?.checked ? ' (Initial)' : '';
@@ -213,8 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (predefinedAddonSelect) {
         predefinedAddonSelect.addEventListener('change', function() {
-            updatePredefinedAddonFields();
-            updateWalkinPreview();
+            updatePredefinedAddonFields().then(updateWalkinPreview);
         });
     }
     if (predefinedAddonQtyInput) {
@@ -222,12 +247,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Enforce min=1/empty=>1 at UI-level for better UX
             const n = normalizeAddonQty(predefinedAddonQtyInput.value);
             predefinedAddonQtyInput.value = n;
-            updatePredefinedAddonFields();
-            updateWalkinPreview();
+            updatePredefinedAddonFields().then(updateWalkinPreview);
         });
     }
 
-    const walkinInputs = [fName, fContact, fArea, fStartTime, fEndTime, fFees, fDiscount];
+    const walkinInputs = [fName, fContact, fArea, fStartTime, fDurationSelect, fEndTime, fFees, fDiscount];
 
     walkinInputs.forEach(el => {
         if (el) el.addEventListener('input', updateWalkinPreview);
@@ -256,6 +280,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (fOpenTime) {
         fOpenTime.addEventListener('change', function() {
             if (fEndTime) fEndTime.disabled = this.checked;
+            if (this.checked) {
+                if (fEndTime) fEndTime.value = '';
+                if (fEndDisplay) fEndDisplay.value = '';
+            } else if (fStartTime?.value && fDurationSelect?.value) {
+                const start = new Date(fStartTime.value);
+                const durationHours = parseFloat(fDurationSelect.value) || 1;
+                const end = new Date(start.getTime() + durationHours * 3600 * 1000);
+                if (fEndTime) fEndTime.value = end.toISOString().slice(0, 16);
+                if (fEndDisplay) fEndDisplay.value = end.toISOString().slice(0, 16);
+            }
             updateWalkinPreview();
         });
     }
@@ -297,31 +331,34 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Show confirmation modal with walk-in details
+            const confirmationTitle = 'Confirm Walk-in?';
+            const confirmationText = `Confirm walk-in for ${fName.value}. Total: ${pTotal.innerText}`;
+
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
-                    title: 'Confirm Walk-in?',
-                    text: `Confirming walk-in for ${fName.value}. Total: ${pTotal.innerText}`,
+                    title: confirmationTitle,
+                    text: confirmationText,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonColor: '#82cae8',
                     cancelButtonColor: '#d90429',
                     confirmButtonText: 'Yes, Check In!',
                     didOpen: function() {
-                        // Auto-dismiss after 5 seconds if no action taken
                         setTimeout(() => {
                             Swal.getConfirmButton().focus();
                         }, 100);
                     }
                 }).then(result => {
                     if (result.isConfirmed) {
-                        // Submit the form
                         walkinForm.submit();
                     }
                 });
-            } 
-            // unified confirmAction (Swal or DOM fallback)
-            confirmAction('Confirm Walk-in?', `Confirm walk-in for ${fName.value}. Total: ${pTotal.innerText}`, 'Yes, Check In!', 'Cancel')
-                .then(confirmed => { if (confirmed) walkinForm.submit(); });
+            } else if (typeof confirmAction === 'function') {
+                confirmAction(confirmationTitle, confirmationText, 'Yes, Check In!', 'Cancel')
+                    .then(confirmed => { if (confirmed) walkinForm.submit(); });
+            } else {
+                walkinForm.submit();
+            }
         });
     }
 

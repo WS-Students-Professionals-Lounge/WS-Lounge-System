@@ -15,16 +15,29 @@ from database_fixed import (
     LoginForm,
     Membership,
     PaymentInfo,
+    ProfileForm,
     Reservation,
     AttendanceLog,
     ReservationForm,
     RegistrationForm,
+    ChangePasswordForm,
     generate_customer_id,
+    get_user_by_email,
+)
+from flask import (
+    flash,
+    jsonify,
+    request,
+    session,
+    url_for,
+    redirect,
+    Blueprint,
+    current_app,
+    render_template,
 )
 from sqlalchemy import func, or_
 from werkzeug.utils import secure_filename
 from flask_login import current_user, login_required, login_user, logout_user
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for, current_app
 
 # ===========================================================================
 # Auth Blueprint
@@ -40,10 +53,10 @@ def login():
     if request.method == "GET":
         return redirect(url_for("main.index", show_login="true"))
 
-    form = LoginForm()
-    if form.validate_on_submit():
+    form = LoginForm(meta={"csrf": False})
+    if form.validate():
         email = form.email.data.strip().lower()
-        user = User.query.filter(func.lower(User.email) == email).first()
+        user = get_user_by_email(email)
         if user is None or not user.check_password(form.password.data):
             flash("Invalid email or password", "danger")
             return redirect(url_for("main.index", show_login="true"))
@@ -237,6 +250,41 @@ def dashboard():
         )
 
 
+@main_bp.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    profile_form = ProfileForm(obj=current_user)
+    password_form = ChangePasswordForm()
+
+    if request.method == "POST" and request.form.get("profile_submit") is not None:
+        if profile_form.validate_on_submit():
+            email = profile_form.email.data.strip().lower()
+            existing_user = User.query.filter(func.lower(User.email) == email).first()
+            if existing_user and existing_user.id != current_user.id:
+                profile_form.email.errors.append("Email already in use by another account.")
+            else:
+                current_user.name = profile_form.name.data.strip()
+                current_user.email = email
+                current_user.phone = profile_form.phone.data.strip() or None
+                db.session.commit()
+                flash("Profile updated successfully.", "success")
+                return redirect(url_for("main.profile"))
+
+    if request.method == "POST" and request.form.get("password_submit") is not None:
+        if password_form.validate_on_submit():
+            if not current_user.check_password(password_form.current_password.data):
+                password_form.current_password.errors.append("Current password is incorrect.")
+            elif password_form.new_password.data != password_form.confirm_password.data:
+                password_form.confirm_password.errors.append("Passwords do not match.")
+            else:
+                current_user.set_password(password_form.new_password.data)
+                db.session.commit()
+                flash("Password changed successfully.", "success")
+                return redirect(url_for("main.profile"))
+
+    return render_template("profile.html", profile_form=profile_form, password_form=password_form)
+
+
 @main_bp.route("/rooms", methods=["GET", "POST"])
 @login_required
 def rooms():
@@ -250,6 +298,18 @@ def rooms():
         .order_by(Room.id)
         .all()
     )
+    selected_room_id = None
+    try:
+        selected_room_id = int(form.room_id.data) if form.room_id.data is not None else None
+    except (TypeError, ValueError):
+        selected_room_id = None
+
+    if selected_room_id is not None:
+        selected_room = Room.query.get(selected_room_id)
+        if selected_room and selected_room.id not in {room.id for room in available_rooms}:
+            available_rooms.append(selected_room)
+
+    available_rooms = sorted(available_rooms, key=lambda room: room.id)
     form.room_id.choices = [
         (room.id, f"{room.name} - ₱{room.base_rate}/hr") for room in available_rooms
     ]

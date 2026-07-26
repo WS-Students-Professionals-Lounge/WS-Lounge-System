@@ -3,43 +3,44 @@ Fixed database.py - clean imports for membership features
 """
 
 import os
+import sqlite3
 from datetime import datetime, timedelta
 
-from dotenv import load_dotenv
 from flask import Flask
-from flask_login import LoginManager, UserMixin
 from flask_mail import Mail
+from dotenv import load_dotenv
+from flask_wtf import FlaskForm
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
-from flask_wtf import FlaskForm
+from flask_login import LoginManager, UserMixin
 from sqlalchemy import and_, create_engine, func, inspect, or_, text
 from werkzeug.security import check_password_hash, generate_password_hash
 from wtforms import (
-    BooleanField,
     DateField,
-    DateTimeField,
-    DecimalField,
-    HiddenField,
-    IntegerField,
-    PasswordField,
-    SelectField,
-    StringField,
-    SubmitField,
-    TextAreaField,
     TimeField,
+    HiddenField,
+    StringField,
+    PasswordField,
+    SubmitField,
+    SelectField,
+    IntegerField,
+    BooleanField,
+    TextAreaField,
 )
+from wtforms.fields import DateTimeField, DecimalField
 from wtforms.validators import (
-    DataRequired,
+    ValidationError,
     Email,
     EqualTo,
     Length,
-    NumberRange,
     Optional,
+    NumberRange,
+    DataRequired,
 )
 
 load_dotenv()
 
-# ---------------------------------------------------------------------------
+# -----# ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -47,21 +48,29 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 def resolve_database_uri():
     env_uri = os.environ.get("SQLALCHEMY_DATABASE_URI")
-    if not env_uri:
-        return f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
+    preferred_local_uri = f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
 
-    try:
-        engine = create_engine(env_uri)
-        conn = engine.connect()
-        conn.close()
+    if not env_uri:
+        return preferred_local_uri
+
+    if env_uri.startswith("sqlite"):
         return env_uri
-    except Exception as exc:
-        print(
-            "Warning: configured SQLALCHEMY_DATABASE_URI is not reachable; "
-            "falling back to local SQLite."
-        )
-        print(f"Database error: {exc}")
-        return f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
+
+    if env_uri.startswith("mysql") or env_uri.startswith("postgres"):
+        try:
+            engine = create_engine(env_uri)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return env_uri
+        except Exception as exc:
+            print(
+                "Warning: configured SQLALCHEMY_DATABASE_URI is not reachable; "
+                "falling back to local SQLite."
+            )
+            print(f"Database error: {exc}")
+            return preferred_local_uri
+
+    return env_uri
 
 
 class Config:
@@ -136,6 +145,60 @@ def get_common_area_count():
     ).count()
 
 
+def get_user_by_email(email):
+    """Resolve a user by email from the active database or the local SQLite fallback."""
+    normalized_email = (email or "").strip().lower()
+    if not normalized_email:
+        return None
+
+    user = User.query.filter(func.lower(User.email) == normalized_email).first()
+    if user:
+        return user
+
+    sqlite_db_path = os.path.join(BASE_DIR, "app.db")
+    if not os.path.exists(sqlite_db_path):
+        return None
+
+    try:
+        active_db_name = getattr(db.engine.url, "database", None)
+    except Exception:
+        active_db_name = None
+
+    if active_db_name and os.path.abspath(sqlite_db_path) == os.path.abspath(active_db_name):
+        return None
+
+    try:
+        conn = sqlite3.connect(sqlite_db_path)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT name, email, phone, password, role, is_active FROM users WHERE lower(email)=?",
+            (normalized_email,),
+        )
+        row = cur.fetchone()
+        conn.close()
+    except Exception:
+        return None
+
+    if not row:
+        return None
+
+    fallback_user = User.query.filter(func.lower(User.email) == normalized_email).first()
+    if fallback_user:
+        return fallback_user
+
+    imported_user = User(
+        name=row[0] or "Imported User",
+        email=row[1],
+        phone=row[2],
+        password=row[3],
+        role=row[4] or "member",
+        is_active=(row[5] if row[5] is not None else True),
+    )
+    db.session.add(imported_user)
+    db.session.commit()
+    return imported_user
+
+
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
@@ -169,7 +232,25 @@ class User(UserMixin, db.Model):
         self.password = generate_password_hash(password)
 
     def check_password(self, password):
-        return check_password_hash(self.password, password)
+        if not self.password:
+            return False
+
+        if not isinstance(self.password, str):
+            return False
+
+        if password is None:
+            return False
+
+        if self.password.startswith(("scrypt:", "pbkdf2:", "bcrypt:", "argon2")):
+            return check_password_hash(self.password, password)
+
+        if self.password == password:
+            return True
+
+        if self.password == password.strip():
+            return True
+
+        return False
 
     @property
     def total_mins(self):
@@ -639,6 +720,23 @@ class RegistrationForm(FlaskForm):
     password = PasswordField("Password", validators=[DataRequired()])
     password2 = PasswordField("Repeat Password", validators=[DataRequired(), EqualTo("password")])
     submit = SubmitField("Register")
+
+
+class ProfileForm(FlaskForm):
+    name = StringField("Full Name", validators=[DataRequired(), Length(max=64)])
+    email = StringField("Email Address", validators=[DataRequired(), Email()])
+    phone = StringField("Contact Number", validators=[Length(max=20)])
+    profile_submit = SubmitField("Save Profile")
+
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField("Current Password", validators=[DataRequired()])
+    new_password = PasswordField("New Password", validators=[DataRequired(), Length(min=8)])
+    confirm_password = PasswordField(
+        "Confirm New Password",
+        validators=[DataRequired(), EqualTo("new_password", message="Passwords must match")],
+    )
+    password_submit = SubmitField("Change Password")
 
 
 class ReservationForm(FlaskForm):

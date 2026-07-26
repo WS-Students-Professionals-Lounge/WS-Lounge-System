@@ -17,8 +17,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from sqlalchemy import and_, func, inspect, or_, text
 from werkzeug.security import check_password_hash, generate_password_hash
-from wtforms import BooleanField, DateField, DateTimeField, DecimalField, HiddenField, IntegerField, PasswordField, \\
+from wtforms import BooleanField, DateField, DecimalField, HiddenField, IntegerField, PasswordField, \
     SelectField, StringField, SubmitField, TextAreaField, TimeField
+from wtforms.fields import DateTimeField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, Optional
 
 load_dotenv()

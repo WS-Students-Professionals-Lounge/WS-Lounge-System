@@ -6,6 +6,12 @@ import os
 from io import BytesIO
 from datetime import datetime, timedelta
 
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_LEFT
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
 from database_fixed import AdminReservationForm, AttendanceLog, DailyReport, Membership, PaymentInfo, Reservation, \
     Room, SoloPlan, TimeLog, User, UserActivityLog, WalkinForm, WalkinReservation, db, generate_customer_id, \
     get_common_area_count, mail
@@ -13,10 +19,27 @@ from flask_mail import Message
 from werkzeug.utils import secure_filename
 from flask_login import current_user, login_required
 from sqlalchemy import and_, func, inspect, or_, text
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
 from time_utils import format_checkin_time, format_checkout_time, format_date, decimal_hours_to_readable
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+
+def calculate_admin_total_amount(
+    room_rate=0.0,
+    duration_hours=1.0,
+    extra_fee=0.0,
+    addon_subtotal=0.0,
+    discount_rate=0.0,
+    is_open_time=False,
+):
+    """Calculate an admin reservation/walk-in total using the shared billing formula."""
+    rate = float(room_rate or 0.0)
+    duration = 1.0 if is_open_time else float(duration_hours or 1.0)
+    discount = float(discount_rate or 0.0)
+    room_cost = rate * duration * (1 - discount)
+    total = room_cost + float(extra_fee or 0.0) + float(addon_subtotal or 0.0)
+    return round(total, 2)
 
 
 def require_super_admin():
@@ -300,11 +323,20 @@ def dashboard():
 
     form = WalkinForm()
     rooms = Room.query.filter(~Room.name.ilike('Test Room%')).all()
+    unique_rooms = []
+    seen_room_names = set()
+    for room in rooms:
+        room_name = room.name.strip().lower()
+        if room_name in seen_room_names:
+            continue
+        seen_room_names.add(room_name)
+        unique_rooms.append(room)
+
     form.room_id.choices = [
         (room.id, f"{room.name} (₱{room.base_rate}/hr)") for room in rooms
     ]
 
-    room_reservations = get_active_room_reservations(rooms)
+    room_reservations = get_active_room_reservations(unique_rooms)
     recent_members = (
         User.query.filter_by(role="member")
         .order_by(User.created_at.desc())
@@ -412,7 +444,7 @@ def dashboard():
         active_plans=active_plans,
         reservations_today=reservations_today,
         revenue_today=revenue_today,
-        rooms=rooms,
+        rooms=unique_rooms,
         room_reservations=room_reservations,
         recent_members=recent_members,
         incomplete_count=incomplete_count,
@@ -615,8 +647,16 @@ def walkin_checkin_modal():
             return redirect(url_for("admin.dashboard"))
 
         total_from_js = request.form.get("total_price")
-        total_amount = (
-            float(total_from_js) if total_from_js and not is_open_time else 0.0
+        extra_fee = float(form.extra_fee.data) if form.extra_fee.data else 0.0
+        addon_subtotal = float(form.addon_subtotal.data) if form.addon_subtotal.data else 0.0
+        room_rate = room.base_rate or 0
+        total_amount = calculate_admin_total_amount(
+            room_rate=room_rate,
+            duration_hours=1.0,
+            extra_fee=extra_fee,
+            addon_subtotal=addon_subtotal,
+            discount_rate=float(form.discount.data) if getattr(form, "discount", None) else 0.0,
+            is_open_time=is_open_time,
         )
 
         new_walkin = Reservation(
@@ -627,7 +667,8 @@ def walkin_checkin_modal():
             contact_number=form.contact_number.data or "N/A",
             pax_count=form.pax_count.data,
             extra_notes=form.extra_notes.data,
-            extra_fee=float(form.extra_fee.data) if form.extra_fee.data else 0.0,
+            extra_fee=extra_fee,
+            addon_subtotal=addon_subtotal,
             start_time=start_time,
             end_time=end_time,
             is_open_time=is_open_time,
@@ -655,6 +696,7 @@ def walkin_checkin_modal():
             status="Walk-in",
             total_amount=new_walkin.total_amount,
             extra_fee=new_walkin.extra_fee,
+            addon_subtotal=new_walkin.addon_subtotal,
             paid=False,
             added_by=new_walkin.added_by,
         )
@@ -690,22 +732,29 @@ def walkin_checkout(res_id):
     elif res.is_open_time:
         duration_seconds = (now - res.start_time).total_seconds()
         duration_minutes = max(1, int(duration_seconds / 60))
-        room_rate = res.room.base_rate or 0
-        res.total_amount = round(
-            ((duration_minutes / 60) * room_rate) + (res.extra_fee or 0), 2
+        res.total_amount = calculate_admin_total_amount(
+            room_rate=res.room.base_rate or 0,
+            duration_hours=duration_minutes / 60,
+            extra_fee=res.extra_fee or 0,
+            addon_subtotal=res.addon_subtotal or 0,
+            discount_rate=getattr(res, "discount_rate", 0) or 0,
+            is_open_time=True,
         )
         res.end_time = now
     else:
         if not res.total_amount or res.total_amount == 0:
             try:
-                room_rate = res.room.base_rate or 0
                 if res.end_time and res.start_time:
                     diff_hours = (res.end_time - res.start_time).total_seconds() / 3600
                     diff_hours = max(diff_hours, 0)
-                    discount = getattr(res, "discount_rate", 0) or 0
-                    room_cost = room_rate * diff_hours
-                    room_cost = room_cost * (1 - (discount or 0))
-                    res.total_amount = round(room_cost + (res.extra_fee or 0), 2)
+                    res.total_amount = calculate_admin_total_amount(
+                        room_rate=res.room.base_rate or 0,
+                        duration_hours=diff_hours,
+                        extra_fee=res.extra_fee or 0,
+                        addon_subtotal=res.addon_subtotal or 0,
+                        discount_rate=getattr(res, "discount_rate", 0) or 0,
+                        is_open_time=False,
+                    )
             except Exception:
                 pass
         res.end_time = now
@@ -759,22 +808,29 @@ def process_payment(reservation_id):
         duration_minutes = max(
             1, int((now - res.start_time).total_seconds() / 60)
         )
-        room_rate = res.room.base_rate or 0
-        res.total_amount = round(
-            ((duration_minutes / 60) * room_rate) + (res.extra_fee or 0), 2
+        res.total_amount = calculate_admin_total_amount(
+            room_rate=res.room.base_rate or 0,
+            duration_hours=duration_minutes / 60,
+            extra_fee=res.extra_fee or 0,
+            addon_subtotal=res.addon_subtotal or 0,
+            discount_rate=getattr(res, "discount_rate", 0) or 0,
+            is_open_time=True,
         )
         res.end_time = now
 
     if not res.is_open_time and (not res.total_amount or res.total_amount == 0):
         try:
-            room_rate = res.room.base_rate or 0
             if res.end_time and res.start_time:
                 diff_hours = (res.end_time - res.start_time).total_seconds() / 3600
                 diff_hours = max(diff_hours, 0)
-                discount = getattr(res, "discount_rate", 0) or 0
-                room_cost = room_rate * diff_hours
-                room_cost = room_cost * (1 - (discount or 0))
-                res.total_amount = round(room_cost + (res.extra_fee or 0), 2)
+                res.total_amount = calculate_admin_total_amount(
+                    room_rate=res.room.base_rate or 0,
+                    duration_hours=diff_hours,
+                    extra_fee=res.extra_fee or 0,
+                    addon_subtotal=res.addon_subtotal or 0,
+                    discount_rate=getattr(res, "discount_rate", 0) or 0,
+                    is_open_time=False,
+                )
         except Exception:
             pass
 
@@ -974,6 +1030,7 @@ def admin_reservations():
                 added_by=current_user.name,
                 extra_notes=form.extra_notes.data,
                 extra_fee=float(form.extra_fee.data) if form.extra_fee.data else 0.0,
+                addon_subtotal=float(form.addon_subtotal.data) if form.addon_subtotal.data else 0.0,
                 total_amount=round(float(total_from_js or 0), 2),
                 discount_rate=(
                     float(form.discount.data)
@@ -1005,7 +1062,7 @@ def admin_reservations():
                     room_cost = base_rate * diff_hours
                     room_cost = room_cost * (1 - (discount or 0))
                     reservation.total_amount = round(
-                        room_cost + (reservation.extra_fee or 0), 2
+                        room_cost + (reservation.extra_fee or 0) + (reservation.addon_subtotal or 0), 2
                     )
                 except Exception:
                     reservation.total_amount = round(float(total_from_js or 0), 2)
@@ -1073,7 +1130,7 @@ def admin_confirm_reservations():
 
     pending_reservations = (
         Reservation.query.filter_by(status="Pending")
-        .order_by(Reservation.start_time.asc())
+        .order_by(Reservation.created_at.desc(), Reservation.start_time.desc())
         .all()
     )
     return render_template(
@@ -1459,14 +1516,129 @@ def generate_completed_sessions_pdf():
     start_date = request.args.get("start_date", "")
     end_date = request.args.get("end_date", "")
 
-    if start_date or end_date:
-        flash(
-            f"PDF generation for completed sessions from {start_date or 'the beginning'} to {end_date or 'today'} is being initialized."
-        )
-    else:
-        flash("PDF generation for completed sessions is being initialized.")
+    parsed_start_date = None
+    parsed_end_date = None
 
-    return redirect(url_for("admin.reports", start_date=start_date, end_date=end_date))
+    if start_date:
+        try:
+            parsed_start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        except ValueError:
+            parsed_start_date = None
+
+    if end_date:
+        try:
+            parsed_end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            parsed_end_date = None
+
+    query = Reservation.query.filter(
+        Reservation.status.in_(["Checked-Out", "Cancelled"])
+    )
+
+    if parsed_start_date:
+        query = query.filter(func.date(Reservation.end_time) >= parsed_start_date)
+    if parsed_end_date:
+        query = query.filter(func.date(Reservation.end_time) <= parsed_end_date)
+
+    sessions = query.order_by(Reservation.end_time.desc()).all()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=36,
+        leftMargin=36,
+        topMargin=36,
+        bottomMargin=36,
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "ReportTitle",
+        parent=styles["Heading1"],
+        fontSize=16,
+        leading=20,
+        spaceAfter=8,
+        textColor=colors.HexColor("#1f4e79"),
+    )
+    subtitle_style = ParagraphStyle(
+        "ReportSubtitle",
+        parent=styles["BodyText"],
+        fontSize=9,
+        leading=11,
+        textColor=colors.grey,
+        spaceAfter=10,
+    )
+    body_style = styles["BodyText"]
+
+    elements = [
+        Paragraph("Completed Sessions Report", title_style),
+        Paragraph(
+            f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}",
+            subtitle_style,
+        ),
+        Paragraph(
+            f"Date range: {parsed_start_date or 'Beginning'} to {parsed_end_date or 'Today'}",
+            subtitle_style,
+        ),
+        Spacer(1, 8),
+    ]
+
+    if not sessions:
+        elements.append(Paragraph("No completed sessions found for the selected date range.", body_style))
+    else:
+        table_data = [[
+            "Customer",
+            "Contact",
+            "Room",
+            "Status",
+            "Staff",
+            "Start",
+            "End",
+            "Total Bill",
+        ]]
+
+        for session in sessions:
+            table_data.append([
+                session.customer_name or "N/A",
+                session.contact_number or "N/A",
+                session.room.name if session.room else "Unknown",
+                session.status or "N/A",
+                (session.approved_by.name if session.approved_by else (session.user.name if session.user else session.added_by or "Unknown")),
+                session.start_time.strftime("%b %d, %Y %I:%M %p") if session.start_time else "N/A",
+                session.end_time.strftime("%b %d, %Y %I:%M %p") if session.end_time else "N/A",
+                f"PHP{session.total_amount:,.2f}" if session.total_amount is not None else "PHP0.00",
+            ])
+
+        table = Table(table_data, repeatRows=1)
+        table.setStyle(
+            TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f4e79")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                ("TOPPADDING", (0, 0), (-1, 0), 8),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ("ALIGN", (0, 1), (-1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 1), (-1, -1), 8),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ])
+        )
+        elements.append(table)
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="completed_sessions_report.pdf",
+    )
 
 
 @admin_bp.route("/members")

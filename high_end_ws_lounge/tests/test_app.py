@@ -1,5 +1,7 @@
 import os
+import sqlite3
 import sys
+from datetime import datetime
 import pytest
 import uuid
 from io import BytesIO
@@ -47,6 +49,61 @@ def test_login(app, client):
         print(f"Login response status: {res.status_code}")
         print(f"Login response location: {res.location}")
         assert res.status_code == 302  # Redirect on success
+
+
+def test_login_accepts_existing_account_without_csrf_token(app, client):
+    with app.app_context():
+        email = f"legacy-{uuid.uuid4().hex[:8]}@example.com"
+        user = User(name='legacy', email=email, role='member')
+        user.password = 'legacy-pass'
+        db.session.add(user)
+        db.session.commit()
+
+        app.config['WTF_CSRF_ENABLED'] = True
+        res = client.post('/auth/login', data={'email': email, 'password': 'legacy-pass'})
+
+        assert res.status_code == 302
+        assert res.headers['Location'].endswith('/dashboard')
+
+
+def test_login_falls_back_to_local_sqlite_user(app, client):
+    with app.app_context():
+        email = f"sqlite-fallback-{uuid.uuid4().hex[:8]}@example.com"
+        sqlite_path = os.path.join(os.path.dirname(__file__), '..', 'app.db')
+        conn = sqlite3.connect(sqlite_path)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO users (name, email, phone, password, role, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ('sqlite fallback', email, '09170000000', 'legacy-pass', 'member', 1, datetime.utcnow()),
+        )
+        conn.commit()
+        conn.close()
+
+        res = client.post('/auth/login', data={'email': email, 'password': 'legacy-pass'})
+
+        assert res.status_code == 302
+        assert res.headers['Location'].endswith('/dashboard')
+
+
+def test_admin_dashboard_deduplicates_room_cards(app, client):
+    with app.app_context():
+        admin_email = f"admin-{uuid.uuid4().hex[:8]}@example.com"
+        admin = User(name='admin', email=admin_email, role='admin')
+        admin.set_password('adminpass')
+        db.session.add(admin)
+
+        duplicate_room_name = f"Duplicate Room {uuid.uuid4().hex[:4]}"
+        db.session.add(Room(name=duplicate_room_name, base_rate=50.0, status='available'))
+        db.session.add(Room(name=duplicate_room_name, base_rate=50.0, status='available'))
+        db.session.commit()
+
+        login_res = client.post('/auth/login', data={'email': admin_email, 'password': 'adminpass'})
+        assert login_res.status_code == 302
+
+        dash = client.get('/admin/dashboard')
+        assert dash.status_code == 200
+        html = dash.get_data(as_text=True)
+        assert html.count(f'<span class="room-name">{duplicate_room_name}</span>') == 1
 
 
 def test_reservation(app, client):
