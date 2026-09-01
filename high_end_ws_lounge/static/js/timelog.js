@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Digital Clock (Existing Function Kept)
+    // 1. Digital Clock
     function updateClock() {
         const now = new Date();
         const options = { 
@@ -13,38 +13,45 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateClock, 1000);
     updateClock();
 
-    // 2. Automatic Session Timer (New Logic for Automatic Tracking)
+    // 2. Automatic Session Timer
     function initSessionTimer() {
         const timerDisplay = document.getElementById('sessionTimer');
         if (!timerDisplay) return;
 
         // Get the end time from the data attribute (provided by Jinja)
-        const endTimeStr = timerDisplay.getAttribute('data-endtime');
+        let endTimeStr = timerDisplay.getAttribute('data-endtime');
         if (!endTimeStr) return;
 
+        // Fix Safari/iOS Date Parsing compatibility issue
+        endTimeStr = endTimeStr.replace(' ', 'T');
         const endTime = new Date(endTimeStr).getTime();
 
+        if (isNaN(endTime)) {
+            timerDisplay.textContent = "INVALID TIME";
+            return;
+        }
+
         const countdownInterval = setInterval(() => {
-            const now = new Date().getTime();
+            const now = Date.now();
             const distance = endTime - now;
 
-            // Time calculations for hours, minutes and seconds
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-            // Display the result in the element
-            if (distance < 0) {
+            // Time calculations
+            if (distance <= 0) {
                 clearInterval(countdownInterval);
                 timerDisplay.textContent = "SESSION ENDED";
                 timerDisplay.style.color = "#EB3223";
-                // Optional: Refresh page to update status automatically when session ends
+                
+                // Refresh page to sync backend session status
                 setTimeout(() => { location.reload(); }, 2000);
             } else {
+                const totalHours = Math.floor(distance / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
                 // Formatting with leading zeros
-                const hDisplay = hours < 10 ? "0" + hours : hours;
-                const mDisplay = minutes < 10 ? "0" + minutes : minutes;
-                const sDisplay = seconds < 10 ? "0" + seconds : seconds;
+                const hDisplay = String(totalHours).padStart(2, '0');
+                const mDisplay = String(minutes).padStart(2, '0');
+                const sDisplay = String(seconds).padStart(2, '0');
                 
                 timerDisplay.textContent = `${hDisplay}:${mDisplay}:${sDisplay}`;
             }
@@ -52,16 +59,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     initSessionTimer();
 
-    // 3. Status Tracker (Kept and adjusted for background sync)
+    // 3. Status Tracker (Syncing via API)
     function updateStatus() {
         fetch('/get_time_inside')
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP Error ${r.status}`);
+                return r.json();
+            })
             .then(data => {
                 const statusText = document.getElementById('statusText');
                 if (!statusText) return;
 
                 if (data.status === 'inside') {
-                    // Logic for when system detects user is within reservation period
                     statusText.textContent = 'Session in Progress';
                     statusText.className = 'status-inside';
                 } else {
@@ -69,27 +78,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     statusText.className = 'status-muted';
                 }
             })
-            .catch(err => console.log("Status check error:", err));
+            .catch(err => console.error("Status check error:", err));
     }
-    // Only run status check if no active timer is displayed to save resources
+
+    // Only run status check if no active timer is displayed to save server resources
     if (!document.getElementById('sessionTimer')) {
         setInterval(updateStatus, 5000);
         updateStatus();
     }
 
-    // 4. Modal Logic (Kept for generic notifications/errors)
+    // 4. Safe Modal Controller
     const modal = document.getElementById('confirmModal');
     const btnCloseModal = document.getElementById('btnCloseModal');
     
-    if (btnCloseModal) {
+    if (btnCloseModal && modal) {
         btnCloseModal.addEventListener('click', () => {
             modal.style.display = 'none';
         });
     }
 
-    window.onclick = (event) => {
-        if (modal && event.target == modal) {
+    window.addEventListener('click', (event) => {
+        if (modal && event.target === modal) {
             modal.style.display = 'none';
         }
-    };
+    });
 });

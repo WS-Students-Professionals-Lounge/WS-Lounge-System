@@ -1,9 +1,24 @@
 document.addEventListener('DOMContentLoaded', function() {
 
+function toLocalISOString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
 
-    // 2. Open Time Toggle Logic (Existing)
+document.addEventListener('DOMContentLoaded', function() {
+    // Diri na ang imo mga DOM query selectors kag event listeners...
     const openTimeToggle = document.getElementById('open-time-toggle');
     const endTimeInput = document.getElementById('end-time');
+    
+});
+    const openTimeToggle = document.getElementById('open-time-toggle');
+    const endTimeInput = document.getElementById('end-time');
+    const durationSelect = document.getElementById('duration-select');
+    const endDisplay = document.getElementById('end-display');
     const hiddenOpenTime = document.getElementById('form-open-time');
 
     if (openTimeToggle && endTimeInput) {
@@ -16,6 +31,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 endTimeInput.style.pointerEvents = "none";
                 endTimeInput.required = false;
                 endTimeInput.value = ""; 
+                if (endDisplay) {
+                    endDisplay.value = '';
+                }
                 calculateTotal();
             } else {
                 endTimeInput.style.opacity = "1";
@@ -26,7 +44,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 3. Live Booking Summary & Calculation (New Upgrade)
     const roomSelector = document.getElementById('room-selector');
     const startTimeInput = document.getElementById('start-time');
         const extraFeesSelect = document.getElementById('extra-fees-select');
@@ -203,7 +220,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const endVal = endTimeInput.value;
 
 
-        const addonPrice = parseFloat(extraFeesSelect.value) || 0;
+        const selectedAddonOption = extraFeesSelect?.options[extraFeesSelect.selectedIndex];
+        const addonPrice = parseFloat(selectedAddonOption?.dataset.unitPrice || extraFeesSelect?.value || 0) || 0;
         const quantity = Math.max(0, parseInt(addonQuantityInput.value) || 0);
         const extraFeeTotal = addonPrice * quantity;
 
@@ -211,7 +229,36 @@ document.addEventListener('DOMContentLoaded', function() {
             extraFeeTotalInput.value = extraFeeTotal.toFixed(2);
         }
 
-        if (selectedRoom.value && startVal && (endVal || openTimeToggle.checked)) {
+        if (startVal && !openTimeToggle.checked && durationSelect?.value) {
+            const start = new Date(startVal);
+            const end = new Date(start.getTime() + (parseFloat(durationSelect.value) || 1) * 3600 * 1000);
+            if (endDisplay) {
+                endDisplay.value = end.toISOString().slice(0, 16);
+            }
+            if (!openTimeToggle?.checked && startTimeInput && startTimeInput.value && durationSelect && durationSelect.value) {
+            const start = new Date(startTimeInput.value);
+            const durationHours = parseFloat(durationSelect.value) || 1;
+
+            // Direct local hours addition
+            const end = new Date(start.getTime());
+            end.setHours(end.getHours() + durationHours);
+
+            // Formatted using local time format
+            const formattedEndLocal = toLocalISOString(end);
+
+            if (endTimeInput) {
+                endTimeInput.value = formattedEndLocal;
+            }
+            if (endDisplay) {
+                endDisplay.value = formattedEndLocal.replace('T', ' ');
+            }
+        }
+        } else if (openTimeToggle.checked) {
+            if (endDisplay) endDisplay.value = '';
+            if (endTimeInput) endTimeInput.value = '';
+        }
+
+        if (selectedRoom.value && startVal && (durationSelect?.value || openTimeToggle.checked)) {
             const rate = parseFloat(selectedRoom.getAttribute('data-rate'));
             let hours = 1;
 
@@ -221,6 +268,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const diffMs = end - start;
                 const diffHrs = diffMs / (1000 * 60 * 60);
                 hours = diffHrs > 0 ? diffHrs : 1;
+            } else if (!openTimeToggle.checked && durationSelect?.value) {
+                hours = parseFloat(durationSelect.value) || 1;
             }
 
             const total = (rate * hours) + extraFeeTotal;
@@ -254,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Listeners for Live Calculation
-    [roomSelector, startTimeInput, endTimeInput, extraFeesSelect, addonQuantityInput].forEach(el => {
+    [roomSelector, startTimeInput, endTimeInput, durationSelect, extraFeesSelect, addonQuantityInput].forEach(el => {
         if (!el) return;
         el.addEventListener('change', calculateTotal);
     });
@@ -342,121 +391,111 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 6. Booking Form Submission with Confirmation Modal
-    const bookingForm = document.getElementById('booking-form');
-    const submitBtn = document.getElementById('submit-booking');
-    
-    if (submitBtn && bookingForm) {
-        submitBtn.addEventListener('click', function(e) {
-            e.preventDefault();
+// 6. Booking Form Submission with Confirmation Modal
+const bookingForm = document.getElementById('booking-form');
+const submitBtn = document.getElementById('submit-booking');
 
-            // Prevent non-members from reserving on client-side
-            if (currentUserRole && currentUserRole !== 'member') {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Members Only',
-                        text: 'Only members can make reservations. Please login with a member account.',
-                        confirmButtonColor: '#82cae8'
-                    });
-                } else {
-                    if (typeof showToast === 'function') showToast('Only members can make reservations.', 'warning');
-                }
-                return;
-            }
-            
-            // Validate required fields
-            const customerName = document.querySelector('input[name="customer_name"]')?.value?.trim();
-            const contactNumber = document.querySelector('input[name="contact_number"]')?.value?.trim();
-            const roomId = roomSelector?.value;
-            const startTime = startTimeInput?.value;
-            const endTime = endTimeInput?.value;
-            const isOpenTime = openTimeToggle?.checked;
-            const paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value;
-            const paymentType = document.querySelector('input[name="payment_type"]:checked')?.value;
-            const receiptUpload = document.getElementById('receipt-upload');
-            
-            if (!customerName || !contactNumber || !roomId || !startTime || (!endTime && !isOpenTime)) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Incomplete Information',
-                        text: 'Please fill in all required fields.',
-                        confirmButtonColor: '#82cae8'
-                    });
-                } else {
-                    if (typeof showToast === 'function') showToast('Please fill in all required fields.', 'warning');
-                    showToast('Please fill in all required fields.', 'warning');
-                }
-                return;
-            }
-            
-            if (!paymentMethod) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Payment Method Required',
-                        text: 'Please select a payment method.',
-                        confirmButtonColor: '#82cae8'
-                    });
-                } else {
-                    if (typeof showToast === 'function') showToast('Please select a payment method.', 'warning');
-                    showToast('Please select a payment method.', 'warning');
-                }
-                return;
-            }
-            
-            if (!paymentType) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Payment Type Required',
-                        text: 'Please select a payment type.',
-                        confirmButtonColor: '#82cae8'
-                    });
-                } else {
-                    if (typeof showToast === 'function') showToast('Please select a payment type.', 'warning');
-                    showToast('Please select a payment type.', 'warning');
-                }
-                return;
-            }
-            
-            if (receiptUpload && !receiptUpload.classList.contains('d-none') && !receiptUpload.value) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Receipt Required',
-                        text: 'Please upload your payment receipt.',
-                        confirmButtonColor: '#82cae8'
-                    });
-                } else {
-                    if (typeof showToast === 'function') showToast('Please upload your payment receipt.', 'warning');
-                    showToast('Please upload your payment receipt.', 'warning');
-                }
-                return;
-            }
-            
-            // Show confirmation modal with booking details
-            const selectedRoom = roomSelector.options[roomSelector.selectedIndex];
-            const roomName = selectedRoom.text.split('(')[0].trim();
-            const totalAmount = summaryTotal.textContent;
-            
-            // Use unified confirmAction helper (SweetAlert2 or DOM fallback)
-            confirmAction('Confirm Reservation?', `Confirming reservation for ${customerName} in ${roomName}. Total: ₱${totalAmount}`, 'Yes, Reserve it!', 'Cancel')
-                .then(confirmed => {
-                    if (confirmed) {
-                        // Use requestSubmit if available (preserves form validation),
-                        // otherwise call the native submit function directly because
-                        // `bookingForm.submit` may be shadowed by an input named "submit".
-                        if (typeof bookingForm.requestSubmit === 'function') {
-                            bookingForm.requestSubmit();
-                        } else {
-                            HTMLFormElement.prototype.submit.call(bookingForm);
-                        }
-                    }
+if (submitBtn && bookingForm) {
+    submitBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+
+        // Prevent non-members from reserving on client-side
+        if (currentUserRole && currentUserRole !== 'member') {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Members Only',
+                    text: 'Only members can make reservations. Please login with a member account.',
+                    confirmButtonColor: '#82cae8'
                 });
-        });
-    }
+            } else {
+                if (typeof showToast === 'function') showToast('Only members can make reservations.', 'warning');
+            }
+            return;
+        }
+        
+        // Validate required fields
+        const customerName = document.querySelector('input[name="customer_name"]')?.value?.trim();
+        const contactNumber = document.querySelector('input[name="contact_number"]')?.value?.trim();
+        const roomId = roomSelector?.value;
+        const startTime = startTimeInput?.value;
+        const endTime = endTimeInput?.value;
+        const isOpenTime = openTimeToggle?.checked;
+        const paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value;
+        const paymentType = document.querySelector('input[name="payment_type"]:checked')?.value;
+        const receiptUpload = document.getElementById('receipt-upload');
+        
+        if (!customerName || !contactNumber || !roomId || !startTime || (!endTime && !isOpenTime)) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Incomplete Information',
+                    text: 'Please fill in all required fields.',
+                    confirmButtonColor: '#82cae8'
+                });
+            } else {
+                if (typeof showToast === 'function') showToast('Please fill in all required fields.', 'warning');
+            }
+            return;
+        }
+        
+        if (!paymentMethod) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Payment Method Required',
+                    text: 'Please select a payment method.',
+                    confirmButtonColor: '#82cae8'
+                });
+            } else {
+                if (typeof showToast === 'function') showToast('Please select a payment method.', 'warning');
+            }
+            return;
+        }
+        
+        if (!paymentType) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Payment Type Required',
+                    text: 'Please select a payment type.',
+                    confirmButtonColor: '#82cae8'
+                });
+            } else {
+                if (typeof showToast === 'function') showToast('Please select a payment type.', 'warning');
+            }
+            return;
+        }
+        
+        if (receiptUpload && !receiptUpload.classList.contains('d-none') && !receiptUpload.value) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Receipt Required',
+                    text: 'Please upload your payment receipt.',
+                    confirmButtonColor: '#82cae8'
+                });
+            } else {
+                if (typeof showToast === 'function') showToast('Please upload your payment receipt.', 'warning');
+            }
+            return;
+        }
+        
+        // Show confirmation modal with booking details
+        const selectedRoom = roomSelector.options[roomSelector.selectedIndex];
+        const roomName = selectedRoom ? selectedRoom.text.split('(')[0].trim() : '';
+        const totalAmount = summaryTotal ? summaryTotal.textContent : '0.00';
+        
+        // Confirm reservation action
+        confirmAction('Confirm Reservation?', `Confirming reservation for ${customerName} in ${roomName}. Total: ₱${totalAmount}`, 'Yes, Reserve it!', 'Cancel')
+            .then(confirmed => {
+                if (confirmed) {
+                    // Direct native form submission bypass (Prevents form.submit name shadowing issue)
+                    HTMLFormElement.prototype.submit.call(bookingForm);
+                }
+            });
+    });
+}
 
     // 7. Simple Alert Auto-dismiss (Existing)
     const alerts = document.querySelectorAll('.modern-alert');

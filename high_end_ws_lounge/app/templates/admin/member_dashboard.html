@@ -8,33 +8,33 @@
 <div class="dashboard-wrapper">
     <h1 class="page-title">Member Dashboard</h1>
     
-    <!-- Membership Status Card -->
+    <!-- ================= 1. MEMBERSHIP CARD SECTION ================= -->
     {% if membership %}
     <div class="membership-card">
         <h3>
             <i class="fas fa-id-card"></i> {{ membership.plan_name }}
             <span class="membership-status {% if membership.is_active %}active{% elif membership.status == 'pending' %}pending{% else %}expired{% endif %}">
-                {{ membership.status|title }}
+                {{ (membership.status or 'inactive')|title }}
             </span>
         </h3>
 
         <div class="remaining-hours">
-            <div class="label">Remaining Hours</div>
-            <div class="remaining-hours-value" id="remaining-hours">{{ "%.2f"|format(membership.hours_left) }} hours</div>
+            <div class="label">Remaining Membership Hours</div>
+            <div class="remaining-hours-value" id="remaining-hours">{{ "%.2f"|format(membership.hours_left or 0) }} hours</div>
         </div>
 
         <div class="membership-info-grid">
             <div class="membership-info-item">
                 <div class="label">Valid From</div>
-                <div class="value">{{ membership.start_date.strftime('%b %d, %Y') }}</div>
+                <div class="value">{{ membership.start_date.strftime('%b %d, %Y') if membership.start_date else 'N/A' }}</div>
             </div>
             <div class="membership-info-item">
                 <div class="label">Expires</div>
-                <div class="value">{{ membership.expiry_date.strftime('%b %d, %Y') }}</div>
+                <div class="value">{{ membership.expiry_date.strftime('%b %d, %Y') if membership.expiry_date else 'N/A' }}</div>
             </div>
             <div class="membership-info-item">
-                <div class="label">Total Hours</div>
-                <div class="value">{{ "%.2f"|format(membership.total_hours) }} hrs</div>
+                <div class="label">Total Membership Hours</div>
+                <div class="value">{{ "%.2f"|format(membership.total_hours or 0) }} hrs</div>
             </div>
         </div>
 
@@ -42,7 +42,11 @@
         {% if membership.is_checked_in %}
         <div class="session-timer">
             <div class="timer-label">⏱️ Current Session</div>
-            <div class="timer-display" id="session-timer">00:00:00</div>
+            <div class="timer-display" 
+                id="session-timer" 
+                data-checkin="{% if membership.check_in_time %}{{ membership.check_in_time.strftime('%Y-%m-%dT%H:%M:%S') }}{% endif %}">
+                00:00:00
+            </div>
             <p class="session-note">Session running...</p>
         </div>
         {% else %}
@@ -54,10 +58,10 @@
         {% endif %}
     </div>
 
-    <!-- Attendance Records -->
-    <div class="attendance-records">
+    <!-- Attendance Records Table -->
+    <div class="attendance-records mt-4">
         <h4><i class="fas fa-history me-2"></i>Your Attendance Records</h4>
-        {% if attendance_logs %}
+        {% if attendance_logs and attendance_logs|length > 0 %}
         <div class="attendance-table">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
@@ -71,16 +75,16 @@
                 <tbody>
                     {% for log in attendance_logs %}
                     <tr>
-                        <td><strong>{{ log.check_in_time | format_date_time }}</strong></td>
-                        <td>{{ log.check_in_time | format_checkin }}</td>
+                        <td><strong>{{ log.check_in_time | format_date_time if log.check_in_time else 'N/A' }}</strong></td>
+                        <td>{{ log.check_in_time | format_checkin if log.check_in_time else 'N/A' }}</td>
                         <td>
                             {% if log.check_out_time %}
                                 {{ log.check_out_time | format_checkout }}
                             {% else %}
-                                <span class="badge bg-warning">Still in lounge</span>
+                                <span class="badge bg-warning text-dark">Still in lounge</span>
                             {% endif %}
                         </td>
-                        <td><strong>{{ log.hours_deducted | format_hours }}</strong></td>
+                        <td><strong>{{ (log.hours_deducted or 0) | format_hours }}</strong></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -93,40 +97,57 @@
         </div>
         {% endif %}
     </div>
+
     {% else %}
-    <!-- No Membership Card -->
+    <!-- No Active Membership Card -->
     <div class="membership-card membership-card--empty">
         <h3><i class="fas fa-star"></i> No Active Membership</h3>
-        <p class="membership-note">You don't have an active membership yet. Apply for a solo plan to get started!</p>
+        <p class="membership-note">You don't have an active membership yet. Apply for a plan to get started!</p>
         <a href="{{ url_for('main.solo_rates') }}" class="btn btn-light btn-lg membership-action-btn">
             <i class="fas fa-arrow-right me-2"></i> Browse Solo Plans
         </a>
     </div>
     {% endif %}
 
-    <!-- Stats Cards -->
-    <div class="member-stats-grid">
+
+    <!-- ================= 2. STATS CARDS SECTION ================= -->
+    <div class="member-stats-grid mt-4">
+        <!-- Room Reservations Counter -->
         <div class="stat-card stats-reservations">
             <div class="stat-icon">
                 <i class="fas fa-calendar-check"></i>
             </div>
-            <div class="stat-number">{{ reservations|length|default(0) }}</div>
+            <div class="stat-number">{{ (reservations|default([]))|length }}</div>
             <div class="stat-label">Room Reservations</div>
         </div>
+
+        <!-- Total Solo Plans Counter -->
         <div class="stat-card stats-solo">
             <div class="stat-icon">
-                <i class="fas fa-star"></i>
+                <i class="fas fa-list-alt"></i>
             </div>
-            <div class="stat-number">{{ solo_plans|length|default(0) }}</div>
-            <div class="stat-label">Solo Plans</div>
+            <div class="stat-number">{{ (solo_plans|default([]))|length }}</div>
+            <div class="stat-label">Solo Plans Availed</div>
+        </div>
+
+        <!-- TOTAL SOLO HOURS DISPLAY -->
+        <div class="stat-card stats-hours" style="background: #ffffff; border-left: 4px solid #0d6efd;">
+            <div class="stat-icon" style="color: #0d6efd;">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-number">{{ "%.2f"|format(total_solo_hours|default(0)) }}</div>
+            <div class="stat-label">Total Solo Hours</div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-6">
+
+    <!-- ================= 3. RESERVATIONS & SOLO PLANS GRID ================= -->
+    <div class="row mt-4">
+        <!-- Left Side: Recent Room Reservations -->
+        <div class="col-md-6 mb-4">
             <div class="reservations-section">
                 <h3 class="section-title">Recent Room Reservations</h3>
-                {% if reservations %}
+                {% if reservations and reservations|length > 0 %}
                 <table class="modern-table">
                     <thead>
                         <tr>
@@ -137,10 +158,18 @@
                     </thead>
                     <tbody>
                         {% for res in reservations %}
-                        <tr>
-                            <td>{{ res.room.name }}</td>
-                            <td>{{ res.start_time }} - {{ res.end_time }}</td>
-                            <td><span class="status-badge badge-success">{{ res.status }}</span></td>
+                        <tr class="filterable-row" data-status="{{ (res.status or 'pending')|lower }}">
+                            <td>{{ res.room.name if res.room else 'Room' }}</td>
+                            <td>
+                                {{ res.start_time.strftime('%I:%M %p') if res.start_time and res.start_time.strftime else res.start_time }} 
+                                - 
+                                {{ res.end_time.strftime('%I:%M %p') if res.end_time and res.end_time.strftime else res.end_time }}
+                            </td>
+                            <td>
+                                <span class="status-badge {% if res.status in ['approved', 'completed', 'active'] %}badge-success{% elif res.status == 'pending' %}badge-warning{% else %}badge-danger{% endif %}">
+                                    {{ (res.status or 'pending')|title }}
+                                </span>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -151,32 +180,45 @@
             </div>
         </div>
         
-        <div class="col-md-6">
+        <!-- Right Side: Solo Plans Cards List WITH RED DELETE BUTTON -->
+        <div class="col-md-6 mb-4">
             <div class="reservations-section">
-                <h3 class="section-title">Solo Plans</h3>
-                {% if solo_plans %}
-                <table class="modern-table">
-                    <thead>
-                        <tr>
-                            <th>Plan</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for plan in solo_plans %}
-                        <tr>
-                            <td>{{ plan.plan_name }}</td>
-                            <td>
-                                <span class="status-badge {% if plan.status=='approved' %}badge-success{% elif plan.status=='pending' %}badge-warning{% else %}badge-danger{% endif %}">
-                                    {{ plan.status.title() }}
+                <h3 class="section-title mb-3">Solo Plans</h3>
+                {% if solo_plans and solo_plans|length > 0 %}
+                    {% for plan in solo_plans %}
+                    <div class="card mb-3 filterable-row" data-status="{{ (plan.status or 'pending')|lower }}" style="position: relative; border: 1px solid #e0e0e0; border-radius: 8px;">
+                        <div class="card-body" style="position: relative; padding: 1.25rem;">
+                            
+                            <!-- RED "X" DELETE BUTTON -->
+                            <span class="delete-plan-btn" 
+                                  data-plan-id="{{ plan.id }}" 
+                                  title="Delete Plan"
+                                  style="position: absolute; top: 12px; right: 15px; color: #dc3545; font-size: 1.3rem; font-weight: bold; cursor: pointer; z-index: 100; line-height: 1;">
+                                &#10005;
+                            </span>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2" style="padding-right: 25px;">
+                                <span class="text-muted small">#{{ plan.id }}</span>
+                                <span class="status-badge {% if plan.status in ['approved', 'completed'] %}badge-success{% elif plan.status == 'pending' %}badge-warning{% else %}badge-danger{% endif %}">
+                                    {{ (plan.status or 'pending')|upper }}
                                 </span>
-                            </td>
-                            <td>{{ plan.created_at.strftime('%Y-%m-%d') }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            </div>
+                            
+                            <h5 class="card-title font-weight-bold mb-1">{{ plan.plan_name if plan.plan_name else 'INDIVIDUAL RATE' }}</h5>
+                            <p class="text-muted small mb-0">
+                                <i class="fas fa-calendar-alt me-1"></i> Expires: 
+                                {% if plan.expiry_date and plan.expiry_date.strftime %}
+                                    {{ plan.expiry_date.strftime('%b %d, %Y') }}
+                                {% elif plan.expiry_date %}
+                                    {{ plan.expiry_date }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </p>
+
+                        </div>
+                    </div>
+                    {% endfor %}
                 {% else %}
                 <div class="text-center py-5">
                     <i class="fas fa-star fa-3x text-muted mb-3"></i>
@@ -189,50 +231,5 @@
     </div>
 </div>
 
-<script>
-    // Session Timer - Update every second if member is checked in
-    {% if membership and membership.is_checked_in %}
-    (function() {
-        let seconds = 0;
-        const timerEl = document.getElementById('session-timer');
-        
-        // Update timer every second
-        setInterval(() => {
-            seconds++;
-            const hours = Math.floor(seconds / 3600);
-            const mins = Math.floor((seconds % 3600) / 60);
-            const secs = seconds % 60;
-            
-            timerEl.textContent = 
-                String(hours).padStart(2, '0') + ':' +
-                String(mins).padStart(2, '0') + ':' +
-                String(secs).padStart(2, '0');
-        }, 1000);
-    })();
-    {% endif %}
-</script>
+<script src="{{ url_for('static', filename='js/member_dashboard.js') }}"></script>
 {% endblock %}
-                    <td>{{ plan.plan_name }}</td>
-                    <td>
-                        <span class="status-badge {% if plan.status=='approved' %}badge-success{% elif plan.status=='pending' %}badge-warning{% else %}badge-danger{% endif %}">
-                            {{ plan.status.title() }}
-                        </span>
-                    </td>
-                    <td>{{ plan.created_at.strftime('%Y-%m-%d') }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-star fa-3x text-muted mb-3"></i>
-            <p class="text-muted mb-4">No solo plans yet</p>
-            <a href="{{ url_for('main.solo_rates') }}" class="modern-btn btn-primary-modern">Apply Now</a>
-        </div>
-        {% endif %}
-    </div>
-
-
-</div>
-{% endblock %}
-

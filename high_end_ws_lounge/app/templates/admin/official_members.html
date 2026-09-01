@@ -16,25 +16,25 @@
     </div>
 
     <!-- Search Box -->
-    <div class="search-box">
+    <div class="search-box mb-4">
         <input type="text" id="memberSearchInput" class="form-control" placeholder="🔍 Search by member name, email, or phone...">
     </div>
 
     <!-- Navigation Tabs -->
-    <ul class="nav member-tabs" role="tablist">
+    <ul class="nav member-tabs mb-3" role="tablist">
         <li class="nav-item">
             <a class="nav-link active" id="active-tab" data-bs-toggle="tab" href="#active" role="tab">
-                <span class="badge bg-success me-2">{{ active_memberships|length }}</span> Active Members
+                <span class="badge bg-success me-2">{{ (active_memberships or [])|length }}</span> Active Members
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link" id="pending-tab" data-bs-toggle="tab" href="#pending" role="tab">
-                <span class="badge bg-warning me-2">{{ pending_memberships|length }}</span> Pending Approval
+                <span class="badge bg-warning me-2">{{ (pending_memberships or [])|length }}</span> Pending Approval
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link" id="expired-tab" data-bs-toggle="tab" href="#expired" role="tab">
-                <span class="badge bg-danger me-2">{{ expired_memberships|length }}</span> Expired
+                <span class="badge bg-danger me-2">{{ (expired_memberships or [])|length }}</span> Expired
             </a>
         </li>
     </ul>
@@ -43,7 +43,7 @@
     <div class="tab-content">
         <!-- Active Members Tab -->
         <div class="tab-pane fade show active" id="active" role="tabpanel">
-            {% if active_memberships %}
+            {% if active_memberships and active_memberships|length > 0 %}
                 <div class="members-container">
                     {% for membership in active_memberships %}
                     <div class="member-card active" id="card-{{ membership.id }}">
@@ -59,6 +59,7 @@
                             <p class="member-email">📞 {{ membership.user.phone }}</p>
                             {% endif %}
                             <p class="member-detail-note"><strong>Plan:</strong> {{ membership.plan_name or 'Standard' }}</p>
+                        </div> <!-- Fixed: Appropriately closed member-info div -->
 
                         <div class="card-buttons">
                             <button class="btn btn-sm btn-toggle {% if membership.is_checked_in %}checked-in{% else %}btn-success{% endif %} btn-membership-toggle"
@@ -90,7 +91,7 @@
 
         <!-- Pending Members Tab -->
         <div class="tab-pane fade" id="pending" role="tabpanel">
-            {% if pending_memberships %}
+            {% if pending_memberships and pending_memberships|length > 0 %}
                 <div class="members-container">
                     {% for membership in pending_memberships %}
                     <div class="member-card pending" id="card-{{ membership.id }}">
@@ -100,12 +101,12 @@
                             <div class="member-name">{{ membership.user.name }}</div>
                             <p class="member-email">{{ membership.user.email }}</p>
                             <p class="member-detail-note"><strong>Plan Applied:</strong> {{ membership.plan_name or 'Standard' }}</p>
-                            <p><small>Applied: {{ membership.start_date.strftime('%b %d, %Y') }}</small></p>
+                            <p><small>Applied: {{ membership.start_date.strftime('%b %d, %Y') if membership.start_date else 'N/A' }}</small></p>
                         </div>
 
                         <div class="member-hours">
                             <div class="hours-label">Requested Hours</div>
-                            <div class="hours-value">{{ "%.2f"|format(membership.total_hours) }} hrs</div>
+                            <div class="hours-value">{{ "%.2f"|format(membership.total_hours or 0) }} hrs</div>
                         </div>
 
                         <div class="card-buttons">
@@ -129,7 +130,7 @@
 
         <!-- Expired Members Tab -->
         <div class="tab-pane fade" id="expired" role="tabpanel">
-            {% if expired_memberships %}
+            {% if expired_memberships and expired_memberships|length > 0 %}
                 <div class="members-container">
                     {% for membership in expired_memberships %}
                     <div class="member-card expired" id="card-{{ membership.id }}">
@@ -143,11 +144,13 @@
 
                         <div class="member-hours">
                             <div class="hours-label">Hours Used</div>
-                            <div class="hours-value">{{ "%.2f"|format(membership.total_hours - membership.hours_left) }} / {{ "%.2f"|format(membership.total_hours) }} hrs</div>
+                            <div class="hours-value">
+                                {{ "%.2f"|format((membership.total_hours or 0) - (membership.hours_left or 0)) }} / {{ "%.2f"|format(membership.total_hours or 0) }} hrs
+                            </div>
                         </div>
 
                         <div class="membership-dates">
-                            <p><strong>Expired:</strong> {{ membership.expiry_date.strftime('%b %d, %Y') }}</p>
+                            <p><strong>Expired:</strong> {{ membership.expiry_date.strftime('%b %d, %Y') if membership.expiry_date else 'N/A' }}</p>
                         </div>
 
                         <div class="card-buttons">
@@ -177,12 +180,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body history-modal" id="historyContent">
-                <!-- Attendance table will be loaded here -->
+                <!-- Attendance table will be loaded here via JavaScript -->
             </div>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}

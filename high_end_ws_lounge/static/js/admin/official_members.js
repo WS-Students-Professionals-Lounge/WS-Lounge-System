@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+    
+    // === 1. SEARCH INPUT LISTENER ===
     const searchInput = document.getElementById('memberSearchInput');
     if (searchInput) {
         searchInput.addEventListener('input', () => {
@@ -6,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // === 2. EVENT DELEGATION / DIRECT BINDINGS FOR BUTTONS ===
     document.querySelectorAll('.btn-membership-toggle').forEach((button) => {
         button.addEventListener('click', () => {
             const membershipId = button.dataset.membershipId;
@@ -43,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// === HELPER: FETCH API WITH JSON HEADERS ===
 async function postJson(url, payload = {}) {
     const response = await fetch(url, {
         method: 'POST',
@@ -52,53 +56,88 @@ async function postJson(url, payload = {}) {
         },
         body: JSON.stringify(payload)
     });
-    const data = await response.json();
+    
+    const data = await response.json().catch(() => ({}));
     if (!response.ok || data.status !== 'success') {
         throw new Error(data.message || `Request failed with status ${response.status}`);
     }
     return data;
 }
 
+// === CHECK-IN / CHECK-OUT TOGGLE ===
 function toggleCheckInOut(membershipId, memberName, button) {
     if (!button) return;
-    const endpoint = button.classList.contains('checked-in') ? 'check-out' : 'check-in';
+    const isCheckedIn = button.classList.contains('checked-in');
+    const endpoint = isCheckedIn ? 'check-out' : 'check-in';
     const originalText = button.textContent.trim();
 
-    if (!window.confirm(`Are you sure you want to ${endpoint.replace('-', ' ')} for ${memberName}?`)) {
+    const actionText = endpoint.replace('-', ' ');
+    if (!window.confirm(`Are you sure you want to ${actionText} for ${memberName}?`)) {
         return;
     }
 
     button.disabled = true;
     button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
 
-    postJson(`/admin/api/member/${membershipId}/${endpoint}`)
+    postJson(`/admin/api/member/${membershipId}/${endpoint}`, {})
         .then((data) => {
-            if (endpoint === 'check-in') {
-                button.classList.remove('btn-success');
-                button.classList.add('checked-in');
-                button.textContent = '🛑 End Session';
+            if (data.status === 'success') {
+                // Pangitaon ang container card sang member para ma-update ang Status Text
+                const card = button.closest('.card') || button.closest('.member-card') || button.parentElement.parentElement;
+                const statusElement = card ? card.querySelector('.member-status-text, [class*="status"]') : null;
+
+                if (endpoint === 'check-in') {
+                    button.classList.remove('btn-success', 'btn-primary');
+                    button.classList.add('checked-in', 'btn-danger');
+                    button.textContent = '🛑 Check Out';
+
+                    if (statusElement && statusElement.textContent.includes('Status:')) {
+                        statusElement.textContent = 'Status: Checked In';
+                    }
+                } else {
+                    button.classList.remove('checked-in', 'btn-danger');
+                    button.classList.add('btn-primary', 'btn-success');
+                    button.textContent = '✓ Check In';
+
+                    if (statusElement && statusElement.textContent.includes('Status:')) {
+                        statusElement.textContent = 'Status: Checked Out';
+                    }
+                }
+
+                showNotification('success', data.message || 'Updated successfully.');
+                
+                // Reload para mag-sync ang tanan nga data fields kag Renew Membership button state
+                setTimeout(() => {
+                    window.location.reload();
+                }, 800);
             } else {
-                button.classList.remove('checked-in');
-                button.classList.add('btn-success');
-                button.textContent = '✓ Check-In';
+                alert(data.message || 'Error updating status');
+                button.textContent = originalText;
+                button.disabled = false;
             }
-            showNotification('success', data.message || 'Membership updated.');
         })
         .catch((error) => {
-            console.error(error);
+            console.error('Check-In/Out Error:', error);
             button.textContent = originalText;
-            showNotification('danger', error.message || 'An error occurred.');
-        })
-        .finally(() => {
             button.disabled = false;
+            showNotification('danger', error.message || 'An error occurred.');
         });
 }
 
+// === ATTENDANCE HISTORY MODAL ===
 function showHistory(membershipId, memberName) {
     const historyModalElement = document.getElementById('historyModal');
-    if (!historyModalElement) return;
+    if (!historyModalElement) {
+        console.warn('historyModal element not found in DOM.');
+        return;
+    }
 
-    const modal = new bootstrap.Modal(historyModalElement);
+    // Safe Bootstrap Modal Initialization Fallback
+    let modalInstance = null;
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        modalInstance = bootstrap.Modal.getInstance(historyModalElement) || new bootstrap.Modal(historyModalElement);
+    }
+
     const title = document.getElementById('historyTitle');
     const content = document.getElementById('historyContent');
 
@@ -107,7 +146,20 @@ function showHistory(membershipId, memberName) {
     }
 
     if (content) {
-        content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        content.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>`;
+    }
+
+    if (modalInstance) {
+        modalInstance.show();
+    } else {
+        // Vanilla CSS fallback display if Bootstrap JS bundle isn't available
+        historyModalElement.style.display = 'block';
+        historyModalElement.classList.add('show');
     }
 
     fetch(`/admin/api/member/${membershipId}/attendance`)
@@ -117,35 +169,42 @@ function showHistory(membershipId, memberName) {
                 throw new Error(data.message || 'Unable to load attendance history');
             }
 
-            let html = `<div class="mb-3">
-                <p><strong>Total Hours Credited:</strong> ${Number(data.total_hours || 0).toFixed(2)} hrs</p>
-                <p><strong>Hours Remaining:</strong> ${Number(data.hours_left || 0).toFixed(2)} hrs</p>
-            </div>`;
+            let html = `
+                <div class="mb-3 p-2 bg-light rounded">
+                    <p class="mb-1"><strong>Total Hours Credited:</strong> ${Number(data.total_hours || 0).toFixed(2)} hrs</p>
+                    <p class="mb-0"><strong>Hours Remaining:</strong> ${Number(data.hours_left || 0).toFixed(2)} hrs</p>
+                </div>`;
 
             if (Array.isArray(data.attendance) && data.attendance.length > 0) {
-                html += `<table class="table table-sm attendance-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Check-In</th>
-                            <th>Check-Out</th>
-                            <th>Hours</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
+                html += `
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Check-In</th>
+                                <th>Check-Out</th>
+                                <th>Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
 
                 data.attendance.forEach((log) => {
-                    html += `<tr>
-                        <td>${log.date || '-'}</td>
-                        <td>${log.check_in || '-'}</td>
-                        <td>${log.check_out || '-'}</td>
-                        <td>${log.hours || '-'}</td>
-                    </tr>`;
+                    html += `
+                            <tr>
+                                <td>${log.date || '-'}</td>
+                                <td>${log.check_in || '-'}</td>
+                                <td>${log.check_out || '-'}</td>
+                                <td>${log.hours || '-'}</td>
+                            </tr>`;
                 });
 
-                html += '</tbody></table>';
+                html += `
+                        </tbody>
+                    </table>
+                </div>`;
             } else {
-                html += '<p class="text-muted text-center">No attendance records yet.</p>';
+                html += '<p class="text-muted text-center py-3">No attendance records yet.</p>';
             }
 
             if (content) {
@@ -153,15 +212,14 @@ function showHistory(membershipId, memberName) {
             }
         })
         .catch((error) => {
-            console.error(error);
+            console.error('History Fetch Error:', error);
             if (content) {
-                content.innerHTML = '<p class="text-danger">Error loading attendance history.</p>';
+                content.innerHTML = `<p class="text-danger text-center py-3">${error.message || 'Error loading attendance history.'}</p>`;
             }
         });
-
-    modal.show();
 }
 
+// === APPROVE MEMBERSHIP ===
 function approveMembership(membershipId, memberName) {
     if (!window.confirm(`Approve membership for ${memberName}?`)) {
         return;
@@ -169,14 +227,15 @@ function approveMembership(membershipId, memberName) {
 
     postJson(`/admin/approve_membership/${membershipId}`)
         .then(() => {
-            showNotification('success', 'Membership approved');
-            setTimeout(() => location.reload(), 1500);
+            showNotification('success', 'Membership approved successfully!');
+            setTimeout(() => location.reload(), 1200);
         })
         .catch((error) => {
             showNotification('danger', error.message || 'Error approving membership');
         });
 }
 
+// === REJECT MEMBERSHIP ===
 function rejectMembership(membershipId, memberName) {
     if (!window.confirm(`Reject membership for ${memberName}?`)) {
         return;
@@ -184,17 +243,18 @@ function rejectMembership(membershipId, memberName) {
 
     postJson(`/admin/reject_membership/${membershipId}`)
         .then(() => {
-            showNotification('success', 'Membership rejected');
-            setTimeout(() => location.reload(), 1500);
+            showNotification('success', 'Membership rejected.');
+            setTimeout(() => location.reload(), 1200);
         })
         .catch((error) => {
             showNotification('danger', error.message || 'Error rejecting membership');
         });
 }
 
+// === FILTER / SEARCH MEMBERS ===
 function filterMembers(searchText) {
     const cards = document.querySelectorAll('.member-card');
-    const normalized = (searchText || '').toLowerCase();
+    const normalized = (searchText || '').toLowerCase().trim();
 
     cards.forEach((card) => {
         const text = card.textContent.toLowerCase();
@@ -202,23 +262,25 @@ function filterMembers(searchText) {
     });
 }
 
+// === DYNAMIC TOAST / ALERT NOTIFICATION ===
 function showNotification(type, message) {
-    const alertHtml = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>`;
-
-    const container = document.querySelector('.container-fluid');
+    const container = document.querySelector('.container-fluid') || document.body;
     if (!container) return;
 
     const alertWrapper = document.createElement('div');
-    alertWrapper.innerHTML = alertHtml;
-    container.insertBefore(alertWrapper.firstElementChild, container.firstElementChild);
+    alertWrapper.className = `alert alert-${type} alert-dismissible fade show position-relative mt-2`;
+    alertWrapper.role = 'alert';
+    alertWrapper.style.zIndex = '9999';
+    alertWrapper.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
 
+    container.insertBefore(alertWrapper, container.firstElementChild);
+
+    // Precise element removal to prevent alert stacking bugs
     setTimeout(() => {
-        const alert = document.querySelector('.alert');
-        if (alert) {
-            alert.remove();
-        }
-    }, 5000);
+        alertWrapper.classList.remove('show');
+        setTimeout(() => alertWrapper.remove(), 300);
+    }, 4000);
 }

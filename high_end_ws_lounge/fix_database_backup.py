@@ -23,9 +23,9 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange
 
 load_dotenv()
 
-# ---------------------------------------------------------------------------
+
 # Config
-# ---------------------------------------------------------------------------
+
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-change-in-prod"
     SQLALCHEMY_DATABASE_URI = (
@@ -46,18 +46,16 @@ class Config:
     POSTS_PER_PAGE = 25
 
 
-# ---------------------------------------------------------------------------
 # Extensions (initialized in run.py via init_app)
-# ---------------------------------------------------------------------------
+
 db = SQLAlchemy()
 login_manager = LoginManager()
 socketio = SocketIO(cors_allowed_origins="*")
 mail = Mail()
 
 
-# ---------------------------------------------------------------------------
 # ID Generator Helper Functions
-# ---------------------------------------------------------------------------
+
 def generate_customer_id(room_type="common"):
     """
     Generate a customer-facing ID based on the type.
@@ -108,9 +106,8 @@ def get_common_area_count():
     ).count()
 
 
-# ---------------------------------------------------------------------------
 # Models
-# ---------------------------------------------------------------------------
+
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
@@ -334,9 +331,8 @@ class UserActivityLog(db.Model):
     ip_address = db.Column(db.String(45))
 
 
-# ---------------------------------------------------------------------------
 # Forms
-# ---------------------------------------------------------------------------
+
 class LoginForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired(), Email()])
     password = PasswordField("Password", validators=[DataRequired()])

@@ -3,7 +3,7 @@ membership_routes.py
 Membership management routes for admin panel - Official Members page and check-in/check-out functionality
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, render_template, jsonify, request, url_for, redirect, flash
 from flask_login import login_required, current_user
 from database_fixed import db, Membership, AttendanceLog, User
@@ -13,9 +13,8 @@ from admin import require_admin_or_staff, require_admin_or_staff_json
 membership_bp = Blueprint("membership", __name__, url_prefix="/admin/membership")
 
 
-# ===================================================================
 # Official Members Page - Card Layout View
-# ===================================================================
+
 @membership_bp.route("/official-members", methods=["GET"])
 @login_required
 def official_members():
@@ -40,8 +39,8 @@ def official_members():
             'user_email': membership.user.email if membership.user else 'Unknown',
             'user_phone': membership.user.phone if membership.user else 'N/A',
             'plan_name': membership.plan_name,
-            'start_date': membership.start_date,
-            'expiry_date': membership.expiry_date,
+            'start_date': membership.start_date + timedelta(hours=8) if membership.start_date else None,
+            'expiry_date': membership.expiry_date + timedelta(hours=8) if membership.expiry_date else None,
             'total_hours': membership.total_hours,
             'hours_left': membership.hours_left,
             'is_checked_in': membership.is_checked_in,
@@ -64,9 +63,8 @@ def official_members():
     )
 
 
-# ===================================================================
 # Member History Modal Data
-# ===================================================================
+
 @membership_bp.route("/history/<int:membership_id>", methods=["GET"])
 @login_required
 def get_member_history(membership_id):
@@ -84,11 +82,14 @@ def get_member_history(membership_id):
     
     logs_data = []
     for log in logs:
+        check_in_ph = log.check_in_time + timedelta(hours=8) if log.check_in_time else None
+        check_out_ph = log.check_out_time + timedelta(hours=8) if log.check_out_time else None
+
         logs_data.append({
             'id': log.id,
-            'date': log.check_in_time.strftime('%B %d, %Y'),
-            'check_in': log.check_in_time.strftime('%I:%M %p'),
-            'check_out': log.check_out_time.strftime('%I:%M %p') if log.check_out_time else 'Still checked in',
+            'date': check_in_ph.strftime('%B %d, %Y') if check_in_ph else 'N/A',
+            'check_in': check_in_ph.strftime('%I:%M %p') if check_in_ph else 'N/A',
+            'check_out': check_out_ph.strftime('%I:%M %p') if check_out_ph else 'Still checked in',
             'hours_deducted': round(log.hours_deducted, 2),
             'session_duration': round(log.session_duration_hours, 2),
         })
@@ -100,9 +101,8 @@ def get_member_history(membership_id):
     })
 
 
-# ===================================================================
 # Check-In / Check-Out API Endpoints
-# ===================================================================
+
 @membership_bp.route("/check-in/<int:membership_id>", methods=["POST"])
 @login_required
 def check_in(membership_id):
@@ -128,7 +128,8 @@ def check_in(membership_id):
         }), 400
     
     # Create new attendance log with check-in time
-    now = datetime.utcnow()
+    now = datetime.utcnow() + timedelta(hours=8)
+
     log = AttendanceLog(
         membership_id=membership_id,
         check_in_time=now,
@@ -173,7 +174,7 @@ def check_out(membership_id, attendance_log_id):
         }), 400
     
     # Set check-out time
-    now = datetime.utcnow()
+    now = datetime.utcnow() + timedelta(hours=8)
     log.check_out_time = now
     
     # Calculate hours deducted
@@ -215,7 +216,7 @@ def check_out_active(membership_id):
             'message': 'No active session found for this member.'
         }), 400
 
-    now = datetime.utcnow()
+    now = datetime.utcnow() + timedelta(hours=8)
     log.check_out_time = now
     hours_duration = log.session_duration_hours
     log.hours_deducted = hours_duration
@@ -235,9 +236,8 @@ def check_out_active(membership_id):
     })
 
 
-# ===================================================================
 # Approve/Activate Membership
-# ===================================================================
+
 @membership_bp.route("/approve/<int:membership_id>", methods=["POST"])
 @login_required
 def approve_membership(membership_id):
@@ -254,7 +254,17 @@ def approve_membership(membership_id):
             'message': 'Only pending memberships can be approved.'
         }), 400
     
+    # 1. Kuhaon ang tunay nga oras sa Pilipinas subong (+8 hours halin sa UTC)
+    now_ph = datetime.utcnow() + timedelta(hours=8)
+    
+    # 2. Update status kag ang Start Date sa oras sang pag-approve
     membership.status = 'active'
+    membership.start_date = now_ph
+    
+    # 3. I-calculate ang expiry base sa duration sang plan (kon may plan_duration_days field)
+    if hasattr(membership, 'plan_duration_days') and membership.plan_duration_days:
+        membership.expiry_date = now_ph + timedelta(days=membership.plan_duration_days)
+    
     db.session.commit()
     
     return jsonify({

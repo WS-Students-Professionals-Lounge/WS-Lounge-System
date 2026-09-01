@@ -474,7 +474,34 @@ input:checked + .slider:before {
 .mt-20 { margin-top: 20px; }
 
 /* Responsive Design */
-@media (max-width: 1320px) {
+@media (min-width: 900px) {
+    .reservation-page-admin-thq-group41-elm {
+        padding: 46px 50px;
+        gap: 30px;
+    }
+
+    .reservation-page-admin-thq-reservation-form-elm,
+    .reservation-page-admin-thq-reservation-details-elm {
+        width: min(760px, 82vw);
+        min-height: 850px;
+    }
+
+    .form-grid,
+    .date-time-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .input-grid-wrapper {
+        display: flex;
+    }
+}
+
+@media (max-width: 899.98px) {
+    .reservation-page-admin-thq-group41-elm {
+        padding: 16px;
+        gap: 16px;
+    }
+
     .reservation-page-admin-thq-reservation-page-admin-elm {
         flex-direction: column;
         align-items: center;
@@ -484,35 +511,25 @@ input:checked + .slider:before {
 
     .reservation-page-admin-thq-reservation-form-elm,
     .reservation-page-admin-thq-reservation-details-elm {
-        width: min(95%, 770px);
+        width: 100%;
+        max-width: 100%;
         min-height: auto;
+        padding: 24px;
     }
 
     .form-grid,
     .date-time-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .input-grid-wrapper {
+        flex-direction: column;
+        gap: 16px;
     }
 }
 
-@media (max-width: 768px) {
-    .reservation-page-admin-thq-group41-elm {
-        padding: 20px;
-        gap: 16px;
-    }
-
-    .reservation-page-admin-thq-reservation-form-elm,
-    .reservation-page-admin-thq-reservation-details-elm {
-        width: 100%;
-        padding: 24px;
-        min-height: auto;
-    }
-
-    .form-grid,
-    .date-time-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
-    }
-
+@media (max-width: 767.98px) {
     .action-buttons-wrapper {
         flex-direction: column;
     }
@@ -525,6 +542,6 @@ input:checked + .slider:before {
     .modern-input,
     .modern-select,
     .full-width-input {
-        font-size: 16px; /* Prevents zoom on iOS */
+        font-size: 16px;
     }
 }

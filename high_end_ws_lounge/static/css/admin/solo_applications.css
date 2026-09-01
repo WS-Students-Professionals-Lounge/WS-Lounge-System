@@ -181,11 +181,31 @@
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (min-width: 768px) {
     .solo-apps-container {
-        padding: 20px;
+        padding: 46px 50px;
     }
-    
+}
+
+@media (max-width: 767.98px) {
+    .solo-apps-container {
+        padding: 20px 16px;
+    }
+
+    .apps-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .apps-table-card {
+        overflow-x: auto;
+    }
+
+    .apps-table {
+        min-width: 720px;
+    }
+
     .apps-table thead th,
     .apps-table tbody td {
         padding: 15px 10px;

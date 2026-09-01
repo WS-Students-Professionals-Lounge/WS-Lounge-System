@@ -182,51 +182,56 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 
-    function renderOccupants(list) {
-        const container = document.getElementById('occupantsList');
-        const countEl = document.getElementById('occupantsCount');
+function renderOccupants(list) {
+    const container = document.getElementById('occupantsList');
+    const countEl = document.getElementById('occupantsCount');
 
-        if (!container || !countEl) {
+    if (!container || !countEl) {
+        return;
+    }
+
+    container.innerHTML = '';
+    countEl.textContent = list.length.toString();
+
+    if (!list.length) {
+        const empty = document.createElement('p');
+        empty.className = 'no-occupants';
+        empty.textContent = 'No active common area occupants.';
+        container.appendChild(empty);
+        return;
+    }
+
+    list.forEach(member => {
+        const item = document.createElement('div');
+        item.className = 'occupant-item';
+        
+        // Gamit sang member.check_in_ms para sa exact timer accuracy
+        item.innerHTML = `
+            <div class="occupant-name">${member.name}</div>
+            <div class="occupant-time">Checked in: ${member.formatted_check_in || 'N/A'}</div>
+            <div class="occupant-elapsed">Time Used: <span class="time-used" data-startms="${member.check_in_ms || ''}" data-starttime="${member.check_in_time}">00:00:00</span></div>
+        `;
+        container.appendChild(item);
+    });
+
+    updateOccupantTimers();
+}
+
+function updateOccupantTimers() {
+    const now = Date.now();
+    document.querySelectorAll('.time-used').forEach(el => {
+        const startMs = parseInt(el.dataset.startms);
+        let startTime = !isNaN(startMs) ? startMs : new Date(el.dataset.starttime).getTime();
+
+        if (isNaN(startTime)) {
+            el.textContent = '00:00:00';
             return;
         }
 
-        container.innerHTML = '';
-        countEl.textContent = list.length.toString();
-
-        if (!list.length) {
-            const empty = document.createElement('p');
-            empty.className = 'no-occupants';
-            empty.textContent = 'No active common area occupants.';
-            container.appendChild(empty);
-            return;
-        }
-
-        list.forEach(member => {
-            const item = document.createElement('div');
-            item.className = 'occupant-item';
-            item.innerHTML = `
-                <div class="occupant-name">${member.name}</div>
-                <div class="occupant-time">Checked in: ${member.formatted_check_in || 'N/A'}</div>
-                <div class="occupant-elapsed">Time Used: <span class="time-used" data-starttime="${member.check_in_time}">00:00:00</span></div>
-            `;
-            container.appendChild(item);
-        });
-
-        updateOccupantTimers();
-    }
-
-    function updateOccupantTimers() {
-        const now = new Date();
-        document.querySelectorAll('.time-used').forEach(el => {
-            const startTime = new Date(el.dataset.starttime);
-            if (isNaN(startTime)) {
-                el.textContent = '00:00:00';
-                return;
-            }
-            const elapsedSeconds = Math.max(0, Math.floor((now - startTime) / 1000));
-            el.textContent = formatDuration(elapsedSeconds);
-        });
-    }
+        const elapsedSeconds = Math.max(0, Math.floor((now - startTime) / 1000));
+        el.textContent = formatDuration(elapsedSeconds);
+    });
+}
 
     function fetchCommonAreaOccupants() {
         fetch('/admin/api/dashboard/common-area-occupants')

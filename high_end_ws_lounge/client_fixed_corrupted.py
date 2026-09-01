@@ -6,101 +6,131 @@ Contains all client-facing blueprints: auth, main, and api.
 import os
 from datetime import datetime, timedelta
 
-                            generate_customer_id)
-                            Room, SoloPlan, TimeLog, User, db,
-                            RegistrationForm, Reservation, ReservationForm,
 from database_fixed import (AttendanceLog, LoginForm, Membership, PaymentInfo,
-                            generate_customer_id)
-from flask import (Blueprint, :, current_app, def, flash, jsonify, login,
-                   redirect, try:)
-        try:
-def logout():
-def register():
-@login_required
-    logout_user()
-    form = LoginForm()
-def get_admin_stats():
-    active_timelogs = (
-    now = datetime.now()
-        if existing_user:
-        except Exception:
-@auth_bp.route("/logout")
-from sqlalchemy import or_
+                            RegistrationForm, Reservation, ReservationForm,
+                            Room, SoloPlan, TimeLog, User, db, generate_customer_id)
+from flask import (Blueprint, current_app, flash, jsonify, login, 
+                    render_template, request, redirect, session, url_for,)
 
-            login_user(user)
-    form = RegistrationForm()
-        if not user.is_active:
-        except Exception as e:
-    if request.method == "GET":
-    if request.method == "GET":
-            db.session.commit()
-            db.session.add(user)
-    session.pop("user_id", None)
-    if form.validate_on_submit():
-    if form.validate_on_submit():
-            db.session.rollback()
-    session.pop("user_name", None)
-    session.pop("user_role", None)
-        session["user_id"] = user.id
-auth_bp = Blueprint("auth", __name__)
-    if current_user.is_authenticated:
-    if current_user.is_authenticated:
-# ===========================================================================
-# Main Blueprint
-# ===========================================================================
-main_bp = Blueprint("main", __name__)
-        session["user_name"] = user.name
-        session["user_role"] = user.role
+from flask_login import current_user, login_required, login_user, logout_user
+from sqlalchemy import func, or_
 from werkzeug.utils import secure_filename
 
-    return redirect(url_for("main.index"))
-        next_page = request.args.get("next")
-        email = form.email.data.strip().lower()
-        email = form.email.data.strip().lower()
+
+# Blueprints
+
+auth_bp = Blueprint("auth", __name__)
+main_bp = Blueprint("main", __name__)
+
 @auth_bp.route("/login", methods=["GET", "POST"])
-            user.set_password(form.password.data)
+def login():
+    if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
-        return redirect(url_for("main.dashboard"))
-        return redirect(url_for("main.dashboard"))
-@auth_bp.route("/register", methods=["GET", "POST"])
-        user = User.query.filter_by(email=email).first()
-        login_user(user, remember=form.remember_me.data)
-    return redirect(url_for("main.index", show_login="true"))
-                   render_template, request, session, url_for)
-        return redirect(next_page or url_for("main.dashboard"))
-    total_members = User.query.filter_by(role="member").count()
-    return redirect(url_for("main.index", show_register="true"))
+
+    form = LoginForm()
+    if request.method == "GET":
         return redirect(url_for("main.index", show_login="true"))
+
+    if form.validate_on_submit():
+        email = form.email.data.strip().lower()
+        user = User.query.filter_by(email=email).first()
+
+        if user is None or not user.check_password(form.password.data):
+            flash("Please enter valid credentials and try again.", "danger")
+            return redirect(url_for("main.index", show_login="true"))
+
+        if not user.is_active:
+            flash(
+                "Access Restricted: Account is inactive. Contact your administrator.",
+                "danger",
+            )
+            return redirect(url_for("main.index", show_login="true"))
+
+        login_user(user, remember=form.remember_me.data)
+        session["user_id"] = user.id
+        session["user_name"] = user.name
+        session["user_role"] = user.role
+
+        next_page = request.args.get("next")
+        return redirect(next_page or url_for("main.dashboard"))
+
+    return redirect(url_for("main.index", show_login="true"))
+
+
+@auth_bp.route("/register", methods=["GET", "POST"])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for("main.dashboard"))
+
+    form = RegistrationForm()
+    if request.method == "GET":
+        return redirect(url_for("main.index", show_register="true"))
+
+    if form.validate_on_submit():
+        email = form.email.data.strip().lower()
+
         # Check if email already exists
         existing_user = User.query.filter_by(email=email).first()
-    flash("Please enter valid credentials and try again.", "danger")
-        return redirect(url_for("main.index", show_register="true"))
-            return redirect(url_for("main.index", show_login="true"))
-            return redirect(url_for("main.index", show_login="true"))
-            return redirect(url_for("main.index", show_login="true"))
-    flash("Please complete all required fields correctly.", "danger")
-            flash("Registration successful! Please login.", "success")
-        if user is None or not user.check_password(form.password.data):
+        if existing_user:
+            flash(
+                "Email already registered. Please login or use a different email.",
+                "danger",
+            )
             return redirect(url_for("main.index", show_register="true"))
-            return redirect(url_for("main.index", show_register="true"))
-from flask_login import current_user, login_required, login_user, logout_user
 
-        db.session.query(TimeLog).filter(TimeLog.time_out.is_(None)).count(),
-        flash("Registration successful! Welcome to your dashboard.", "success")
+        try:
             user = User(name=form.name.data, email=email, phone=form.phone.data)
-            flash("Registration failed. Please try again with a different email.", "danger")
-            flash("Email already registered. Please login or use a different email.", "danger")
-            flash("Access Restricted: Account is inactive. Contact your administrator.", "danger")
+            user.set_password(form.password.data)
+
+            db.session.add(user)
+            db.session.commit()
+
+            login_user(user)
+            flash(
+                "Registration successful! Welcome to your dashboard.", "success"
+            )
+            return redirect(url_for("main.dashboard"))
+        except Exception as e:
+            db.session.rollback()
+            flash(
+                "Registration failed. Please try again with a different email.",
+                "danger",
+            )
+            return redirect(url_for("main.index", show_register="true"))
+
+    flash("Please complete all required fields correctly.", "danger")
+    return redirect(url_for("main.index", show_register="true"))
+
+
+@auth_bp.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    session.pop("user_id", None)
+    session.pop("user_name", None)
+    session.pop("user_role", None)
+    return redirect(url_for("main.index"))
+
+
+# ===========================================================================
+# Helper Functions
+# ===========================================================================
+def get_admin_stats():
+    total_members = User.query.filter_by(role="member").count()
+    active_timelogs = (
+        db.session.query(TimeLog).filter(TimeLog.time_out.is_(None)).count()
     )
+
+    now = datetime.now()
     today_start = datetime(now.year, now.month, now.day)
     today_end = today_start + timedelta(days=1)
-    res_today = (
-        Reservation.query.filter(
-            Reservation.start_time >= today_start,
-            Reservation.start_time < today_end,
-            Reservation.status == "Confirmed",
-        ).count()
-    )
+
+    res_today = Reservation.query.filter(
+        Reservation.start_time >= today_start,
+        Reservation.start_time < today_end,
+        Reservation.status == "Confirmed",
+    ).count()
+
     revenue_today = (
         db.session.query(func.sum(Reservation.total_amount))
         .filter(
@@ -111,29 +141,38 @@ from flask_login import current_user, login_required, login_user, logout_user
         .scalar()
         or 0
     )
+
     return total_members, active_timelogs, res_today, revenue_today
 
 
 def _expire_membership_if_needed(membership):
-    if not membership or membership.status != 'active' or not membership.expiry_date:
+    if (
+        not membership
+        or membership.status != "active"
+        or not membership.expiry_date
+    ):
         return
 
     now = datetime.utcnow()
     if now >= membership.expiry_date:
-        membership.status = 'expired'
+        membership.status = "expired"
         membership.hours_left = 0.0
         membership.is_checked_in = False
 
-        active_log = membership.attendance_logs.filter(AttendanceLog.check_out_time.is_(None)).first()
+        active_log = membership.attendance_logs.filter(
+            AttendanceLog.check_out_time.is_(None)
+        ).first()
         if active_log:
             active_log.check_out_time = membership.expiry_date
             active_log.hours_deducted = round(
-                (active_log.check_out_time - active_log.check_in_time).total_seconds() / 3600,
+                (
+                    active_log.check_out_time - active_log.check_in_time
+                ).total_seconds()
+                / 3600,
                 2,
             )
 
         db.session.commit()
-
 
 @main_bp.route("/")
 def index():
@@ -750,11 +789,8 @@ def solo_rates():
     )
 
 
-
-
-# ===========================================================================
 # API Blueprint
-# ===========================================================================
+
 api_bp = Blueprint("api", __name__)
 
 

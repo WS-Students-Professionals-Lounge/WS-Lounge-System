@@ -105,6 +105,58 @@ function initializeBaseJs() {
             fallbackIcon.style.display = 'block';
         });
     }
+
+    /**
+     * 6. Mobile sidebar drawer behavior
+     */
+    const navToggle = document.querySelector('.mobile-nav-toggle');
+    const sidebar = document.getElementById('mainSidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    function closeMobileSidebar() {
+        if (navToggle) {
+            navToggle.classList.remove('is-open');
+            navToggle.setAttribute('aria-expanded', 'false');
+        }
+        if (sidebar) {
+            sidebar.classList.remove('is-open');
+        }
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.remove('is-open');
+        }
+    }
+
+    function openMobileSidebar() {
+        if (navToggle) {
+            navToggle.classList.add('is-open');
+            navToggle.setAttribute('aria-expanded', 'true');
+        }
+        if (sidebar) {
+            sidebar.classList.add('is-open');
+        }
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.add('is-open');
+        }
+    }
+
+    if (navToggle && sidebar && sidebarOverlay) {
+        navToggle.addEventListener('click', function() {
+            const isOpen = navToggle.classList.contains('is-open');
+            if (isOpen) {
+                closeMobileSidebar();
+            } else {
+                openMobileSidebar();
+            }
+        });
+
+        sidebarOverlay.addEventListener('click', closeMobileSidebar);
+
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 1024) {
+                closeMobileSidebar();
+            }
+        });
+    }
 }
 
 if (document.readyState === 'loading') {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WS Lounge | Elevate Your Focus</title>
+    <title>WS Students & Professionals Lounge</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
@@ -14,24 +14,47 @@
         <div class="container header-flex">
             <div class="logo-container">
                 <img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="WS Logo" class="logo-img">
-                <span class="brand-name">Student & Professionals Lounge</span>
+                <span class="brand-name">WS Students & Professionals Lounge</span>
             </div>
-            <nav class="nav-links">
-                <a href="#hero" class="nav-item">Home</a>
-                <a href="#pricing" class="nav-item">Pricing</a>
-                <a href="#about" class="nav-item">About Us</a>
-            </nav>
-            <div class="auth-buttons">
-                <a href="#" class="nav-item" id="loginNavBtn">Login</a>
-                <a href="#" class="btn-primary btn-nav" id="registerNavBtn">Register</a>
+
+            <button class="hamburger-btn" type="button" aria-label="Toggle navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <div class="desktop-nav-wrap">
+                <nav class="nav-links" aria-label="Main navigation">
+                    <a href="#hero" class="nav-item">Home</a>
+                    <a href="#pricing" class="nav-item">Pricing</a>
+                    <a href="#about" class="nav-item">About Us</a>
+                </nav>
+                <div class="auth-buttons">
+                    <a href="#" class="nav-item" id="loginNavBtn">Login</a>
+                    <a href="#" class="btn-primary btn-nav" id="registerNavBtn">Register</a>
+                </div>
             </div>
         </div>
+
+        <div class="mobile-menu-backdrop" id="mobileMenuBackdrop" aria-hidden="true"></div>
+        <nav class="mobile-menu-panel" id="mobileMenuPanel" aria-label="Mobile menu">
+            <div class="mobile-menu-head">
+                <span>Menu</span>
+            </div>
+            <a href="#hero" class="nav-item">Home</a>
+            <a href="#pricing" class="nav-item">Pricing</a>
+            <a href="#about" class="nav-item">About Us</a>
+            <div class="mobile-auth-buttons">
+                <a href="#" class="nav-item" id="mobileLoginNavBtn">Login</a>
+                <a href="#" class="btn-primary btn-nav" id="mobileRegisterNavBtn">Register</a>
+            </div>
+        </nav>
     </header>
 
     <section id="hero" class="hero">
         <div class="container hero-content-wrapper">
             <div class="hero-content">
-                <h1>Elevate Your Focus.</h1>
+                <h1>Your productivity starts here.</h1>
                 <p>Flexible spaces, distraction-free. Find your perfect study spot or professional workspace today.</p>
                 <a href="#" class="btn-primary btn-large btn-book-hero" id="bookNowBtn">Book a Space Now</a>
             </div>
@@ -105,93 +128,170 @@
                 </div>
             </div>
             <div class="about-image-container">
-                <img src="{{ url_for('static', filename='img/Us_img.png') }}" alt="Workspace Team Meeting" class="about-img">
+                <img src="{{ url_for('static', filename='img/ws.JPG') }}" alt="Workspace Team Meeting" class="about-img">
             </div>
         </div>
     </section>
 
-    <div id="loginModal" class="modal-overlay">
-        <div class="modal-content">
-            <span class="close-modal" id="closeLogin">&times;</span>
-            <div class="modal-logo-container">
-                <img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="WS Logo" class="modal-logo">
-            </div>
-            <h2 class="welcome-text">Welcome Back</h2>
-            {% with messages = get_flashed_messages(category_filter=['danger']) %}
-                {% if messages %}
+<!-- LOGIN MODAL -->
+<div id="loginModal" class="modal-overlay">
+    <div class="modal-content">
+        <span class="close-modal" id="closeLogin">&times;</span>
+        <div class="modal-logo-container">
+            <img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="WS Logo" class="modal-logo">
+        </div>
+        <h2 class="welcome-text">Welcome Back</h2>
+
+        <!-- ENHANCED ALERT BOX FOR LOGIN -->
+        {% with messages = get_flashed_messages(category_filter=['danger']) %}
+            {% if messages %}
+                {% for message in messages %}
                     <div class="modal-flash modal-flash-danger">
-                        {{ messages[0] }}
+                        <i class="fa-solid fa-circle-exclamation alert-icon"></i>
+                        <span>{{ message }}</span>
                     </div>
-                {% endif %}
-            {% endwith %}
-            <form method="POST" action="{{ url_for('auth.login') }}" class="modal-form">
-                {{ login_form.hidden_tag() }}
-                <div class="input-group">
-                    <label>Email</label>
-                    {{ login_form.email(placeholder="Enter your email") }}
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    {{ login_form.password(placeholder="Enter your password") }}
-                </div>
-                <div class="forgot-container">
-                    <a href="#" class="forgot-text">Forgot Password?</a>
-                </div>
-                <button type="submit" class="btn-login-submit">Login</button>
-            </form>
-            <p class="signup-redirect">Don't have an account? <a href="#" id="toRegister">Sign up</a></p>
-        </div>
-    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-    <div id="registerModal" class="modal-overlay">
-        <div class="modal-content">
-            <span class="close-modal" id="closeRegister">&times;</span>
-            <div class="modal-logo-container">
-                <img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="WS Logo" class="modal-logo">
+        <form method="POST" action="{{ url_for('auth.login') }}" class="modal-form">
+            {{ login_form.hidden_tag() }}
+            <div class="input-group">
+                <label>Email</label>
+                {{ login_form.email(placeholder="Enter your email") }}
             </div>
-            
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="modal-flash modal-flash-{{ category }}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
 
-            <h2 class="welcome-text">Create Your Account</h2>
-            <form method="POST" action="{{ url_for('auth.register') }}" class="modal-form">
-                {{ register_form.hidden_tag() }}
-                <div class="input-group">
-                    <label>Name</label>
-                    {{ register_form.name(placeholder="Enter your full name") }}
+            <div class="input-group">
+                <label>Password</label>
+                <div class="password-wrapper" style="position: relative; width: 100%;">
+                    {{ login_form.password(placeholder="Enter your password") }}
+                    <span class="toggle-password-btn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d; z-index: 10;">
+                        <i class="fa-solid fa-eye"></i>
+                    </span>
                 </div>
-                <div class="input-group">
-                    <label>Email</label>
-                    {{ register_form.email(placeholder="Enter your email") }}
-                </div>
-                <div class="input-group">
-                    <label>Phone</label>
-                    {{ register_form.phone(placeholder="Enter your phone number") }}
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    {{ register_form.password(placeholder="Create a password") }}
-                </div>
-                <div class="input-group">
-                    <label>Repeat Password</label>
-                    {{ register_form.password2(placeholder="Repeat your password") }}
-                </div>
-                <button type="submit" class="btn-login-submit">Register</button>
-            </form>
-            <p class="signup-redirect">Already have an account? <a href="#" id="toLogin">Log in</a></p>
+            </div>
+
+            <div class="forgot-container">
+                <a href="#" class="forgot-text">Forgot Password?</a>
+            </div>
+            <button type="submit" class="btn-login-submit">Login</button>
+        </form>
+        <p class="signup-redirect">Don't have an account? <a href="#" id="toRegister">Sign up</a></p>
+    </div>
+</div>
+
+<!-- LOGIN MODAL ALERT (Maga-show LANG kun may error sa LOGIN) -->
+{% if login_form.errors %}
+    <div class="alert alert-danger d-flex align-items-center mb-3" role="alert" style="border-radius: 8px; font-size: 0.85rem; padding: 10px;">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <div>
+            {% for field, errors in login_form.errors.items() %}
+                {% for error in errors %}
+                    <div>{{ error }}</div>
+                {% endfor %}
+            {% endfor %}
         </div>
     </div>
+{% endif %}
+
+<!-- REGISTER MODAL -->
+<div id="registerModal" class="modal-overlay">
+    <div class="modal-content">
+        <span class="close-modal" id="closeRegister">&times;</span>
+        <div class="modal-logo-container">
+            <img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="WS Logo" class="modal-logo">
+        </div>
+        
+        <h2 class="welcome-text">Create Your Account</h2>
+
+        <!-- ENHANCED ALERT BOX FOR REGISTER -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="modal-flash modal-flash-{{ category }}">
+                        {% if category == 'danger' or category == 'error' %}
+                            <i class="fa-solid fa-circle-exclamation alert-icon"></i>
+                        {% else %}
+                            <i class="fa-solid fa-circle-check alert-icon"></i>
+                        {% endif %}
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.register') }}" class="modal-form">
+            {{ register_form.hidden_tag() }}
+            <div class="input-group">
+                <label>Name</label>
+                {{ register_form.name(placeholder="Enter your full name") }}
+            </div>
+            <div class="input-group">
+                <label>Email</label>
+                {{ register_form.email(placeholder="Enter your email") }}
+            </div>
+            <div class="input-group">
+                <label>Phone</label>
+                {{ register_form.phone(placeholder="Enter your phone number") }}
+            </div>
+
+           <!-- REGISTER MODAL PASSWORD FIELD -->
+       <!-- REGISTER PASSWORD FIELD -->
+<div class="input-group">
+    <label>Password</label>
+    <div class="password-wrapper" style="position: relative; width: 100%;">
+        {{ register_form.password(id="reg_password", class="form-control", placeholder="Create a password") }}
+        <span class="toggle-password-btn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d; z-index: 10;">
+            <i class="fa-solid fa-eye"></i>
+        </span>
+    </div>
+
+    <!-- METER BAR CONTAINER -->
+    <div style="width: 100%; margin-top: 6px;">
+        <div style="width: 100%; height: 6px; background-color: #e2e8f0; border-radius: 4px; overflow: hidden;">
+            <div id="reg-strength-bar" style="width: 0%; height: 100%; transition: width 0.3s ease, background-color 0.3s ease;"></div>
+        </div>
+        <div id="reg-strength-text" style="font-size: 0.75rem; font-weight: 600; margin-top: 4px;"></div>
+    </div>
+</div>
+
+<!-- REGISTER CONFIRM PASSWORD FIELD -->
+<div class="input-group" style="margin-top: 10px;">
+    <label>Confirm Password</label>
+    <div class="password-wrapper" style="position: relative; width: 100%;">
+        {{ register_form.password2(id="reg_confirm_password", class="form-control", placeholder="Confirm your password") }}
+        <span class="toggle-password-btn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d; z-index: 10;">
+            <i class="fa-solid fa-eye"></i>
+        </span>
+    </div>
+    
+    <!-- MATCH INDICATOR TEXT -->
+    <div id="reg-match-text" style="font-size: 0.75rem; font-weight: 600; margin-top: 4px;"></div>
+</div>
+            <button type="submit" class="btn-login-submit">Register</button>
+        </form>
+        <p class="signup-redirect">Already have an account? <a href="#" id="toLogin">Log in</a></p>
+    </div>
+</div>
+
+<!-- REGISTER MODAL ALERT (Maga-show LANG kun may error sa REGISTER) -->
+{% if register_form.errors %}
+    <div class="alert alert-danger d-flex align-items-center mb-3" role="alert" style="border-radius: 8px; font-size: 0.85rem; padding: 10px;">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <div>
+            {% for field, errors in register_form.errors.items() %}
+                {% for error in errors %}
+                    <div>{{ error }}</div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
     <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
 </body>
 </html>
-

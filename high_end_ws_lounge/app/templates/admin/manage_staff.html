@@ -2,6 +2,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/members.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 {% endblock %}
 
 {% block content %}
@@ -35,15 +36,37 @@
                             <label class="form-label">Phone</label>
                             <input type="text" name="phone" class="form-control">
                         </div>
+                        
                         <div class="mb-3">
                             <label class="form-label">Password</label>
-                            <input type="password" name="password" class="form-control" required>
+                            <div class="position-relative">
+                                <input type="password" 
+                                    id="staffPassword" 
+                                    name="password" 
+                                    class="form-control pe-5" 
+                                    pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]+$" 
+                                    minlength="8" 
+                                    title="Password must be at least 8 characters long with letters and numbers only." 
+                                    required>
+                                <span id="toggleStaffPassword" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d; z-index: 10;">
+                                    <i class="fa-solid fa-eye" id="staffEyeIcon"></i>
+                                </span>
+                            </div>
+
+                            <!-- METER CONTAINER -->
+                            <div style="width: 100%; margin-top: 6px;">
+                                <div style="width: 100%; height: 6px; background-color: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                                    <div id="staff-strength-bar" style="width: 0%; height: 100%; transition: width 0.3s ease, background-color 0.3s ease;"></div>
+                                </div>
+                                <div id="staff-strength-text" style="font-size: 0.75rem; font-weight: 600; margin-top: 4px;"></div>
+                            </div>
                         </div>
+
                         <div class="mb-3">
                             <label class="form-label">Role</label>
                             <select class="form-select" name="role" required>
                                 <option value="staff" selected>Staff</option>
-                                <option value="admin">Super Admin</option>
+                                <option value="admin">Executive Admin</option>
                             </select>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Create Account</button>
@@ -91,7 +114,7 @@
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">No staff accounts available.</td>
+                                    <td colspan="6" class="text-center text-muted">No staff accounts available.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -102,4 +125,87 @@
         </div>
     </div>
 </div>
+
+<!-- JAVASCRIPT LOGIC -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('toggleStaffPassword');
+    const passwordInput = document.getElementById('staffPassword');
+    const eyeIcon = document.getElementById('staffEyeIcon');
+
+    if (toggleBtn && passwordInput && eyeIcon) {
+        toggleBtn.addEventListener('click', function() {
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+            
+            // Toggle FontAwesome Icon
+            eyeIcon.classList.toggle('fa-eye');
+            eyeIcon.classList.toggle('fa-eye-slash');
+        });
+    }
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    const staffPass = document.getElementById("staffPassword");
+    const staffBar = document.getElementById("staff-strength-bar");
+    const staffText = document.getElementById("staff-strength-text");
+
+    // Pangitaon ang Form nga gina-lukpan sang staffPassword
+    const staffForm = staffPass ? staffPass.closest("form") : null;
+
+    if (staffPass && staffBar && staffText) {
+        staffPass.addEventListener("input", function() {
+            const val = this.value;
+            let score = 0;
+
+            if (!val) {
+                staffBar.style.width = "0%";
+                staffText.textContent = "";
+                return;
+            }
+
+            const hasLetters = /[a-zA-Z]/.test(val);
+            const hasNumbers = /[0-9]/.test(val);
+            const isLong = val.length >= 8;
+
+            if (isLong) score += 33;
+            if (hasLetters) score += 33;
+            if (hasNumbers) score += 34;
+
+            staffBar.style.width = score + "%";
+
+            if (!hasLetters || !hasNumbers || !isLong) {
+                staffBar.style.backgroundColor = "#dc3545";
+                staffText.style.color = "#dc3545";
+                staffText.textContent = "Must be 8+ characters with letters & numbers";
+            } else if (val.length < 10) {
+                staffBar.style.backgroundColor = "#ffc107";
+                staffText.style.color = "#d97706";
+                staffText.textContent = "Good Alphanumeric Password";
+            } else {
+                staffBar.style.backgroundColor = "#198754";
+                staffText.style.color = "#198754";
+                staffText.textContent = "Strong Password!";
+            }
+        });
+    }
+
+    // PUGNGAN ANG FORM SUBMISSION KUN INDI VALID ANG PASSWORD
+    if (staffForm && staffPass) {
+        staffForm.addEventListener("submit", function(e) {
+            const val = staffPass.value;
+            const hasLetters = /[a-zA-Z]/.test(val);
+            const hasNumbers = /[0-9]/.test(val);
+            const isLong = val.length >= 8;
+
+            // Kun indi maabot ang Alphanumeric / 8+ criteria
+            if (!hasLetters || !hasNumbers || !isLong) {
+                e.preventDefault(); // PILIT NGA PI-PUGNGAN ANG FORM SUBMIT
+                alert("Password must be at least 8 characters long and contain both letters and numbers.");
+                staffPass.focus();
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

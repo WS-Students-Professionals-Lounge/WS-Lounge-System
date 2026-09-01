@@ -79,6 +79,41 @@
                 </div>
             </div>
 
+            <div class="right-section">
+                <div class="walkin-header">
+                    <button type="button" id="openWalkinBtn" class="btn-walkin">Walk-in</button>
+                </div>
+
+                <div class="waiting-list-card">
+                    <div class="waiting-header">
+                        <h3>Waiting List - Today</h3>
+                        <img src="https://img.icons8.com/ios/50/64748b/calendar.png" alt="calendar-icon" class="mini-calendar">
+                    </div>
+                    
+                    <div class="waiting-items">
+                        {% for res in pending_reservations %}
+                        <div class="waiting-item">
+                            <p class="waiting-name">Next: {{ res.customer_name }}</p>
+                            <p class="waiting-details">({{ res.room.name }}, {{ res.start_time.strftime('%I:%M') }} - {{ res.end_time.strftime('%I:%M %p') if res.end_time else 'Open' }})</p>
+                        </div>
+                        {% else %}
+                        <p class="no-data">No upcoming reservations.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="common-area-occupants-card">
+                    <div class="occupants-header">
+                        <h3>👥 Common Area Members</h3>
+                        <span class="occupants-count" id="occupantsCount">0</span>
+                    </div>
+                    
+                    <div class="occupants-list" id="occupantsList">
+                        <p class="loading-text">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="room-grid common-area-grid">
                 <div class="room-card dashboard-card common-area-summary" data-room="common area">
                     <div class="room-card-header">
@@ -297,40 +332,6 @@
             <div id="noSearchResults" class="no-results-message">No matching customer or room found.</div>
         </div>
 
-        <div class="right-section">
-            <div class="walkin-header">
-                <button type="button" id="openWalkinBtn" class="btn-walkin">Walk-in</button>
-            </div>
-
-            <div class="waiting-list-card">
-                <div class="waiting-header">
-                    <h3>Waiting List - Today</h3>
-                    <img src="https://img.icons8.com/ios/50/64748b/calendar.png" alt="calendar-icon" class="mini-calendar">
-                </div>
-                
-                <div class="waiting-items">
-                    {% for res in pending_reservations %}
-                    <div class="waiting-item">
-                        <p class="waiting-name">Next: {{ res.customer_name }}</p>
-                        <p class="waiting-details">({{ res.room.name }}, {{ res.start_time.strftime('%I:%M') }} - {{ res.end_time.strftime('%I:%M %p') if res.end_time else 'Open' }})</p>
-                    </div>
-                    {% else %}
-                    <p class="no-data">No upcoming reservations.</p>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="common-area-occupants-card">
-                <div class="occupants-header">
-                    <h3>👥 Common Area Members</h3>
-                    <span class="occupants-count" id="occupantsCount">0</span>
-                </div>
-                
-                <div class="occupants-list" id="occupantsList">
-                    <p class="loading-text">Loading...</p>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -369,8 +370,14 @@
                         <input type="datetime-local" id="f-start-time" class="modern-input" name="start_time">
                     </div>
                     <div class="input-group">
-                        <label class="form-label">End Date/Time</label>
-                        <input type="datetime-local" id="f-end-time" class="modern-input" name="end_time">
+                        <label class="form-label" for="f-duration-select">Duration</label>
+                        <select id="f-duration-select" class="modern-select">
+                            {% for hours in range(1, 25) %}
+                                <option value="{{ hours }}">{{ hours }} hour{{ 's' if hours > 1 else '' }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="datetime-local" id="f-end-display" class="modern-input mt-10" readonly placeholder="Auto-calculated end time">
+                        <input type="hidden" id="f-end-time" name="end_time">
                     </div>
                     <div class="input-group align-items-center">
                         <label class="form-label">Open Time</label>
@@ -386,10 +393,11 @@
                     <label class="form-label">Predefined Add-ons</label>
                     <select id="f-predefined-addon" name="predefined_addon_name" class="modern-select">
                         <option value="None">None</option>
-                        <option value="Projector" data-unit-price="150">Projector (+₱150)</option>
-                        <option value="Extra Chairs" data-unit-price="50">Extra Chairs (+₱50 per chair)</option>
-                        <option value="Extension Cord" data-unit-price="100">Extension Cord (+₱100)</option>
-                        <option value="Whiteboard Set" data-unit-price="200">Whiteboard Set (+₱200)</option>
+                        <option value="Projector" data-unit-price="100">Projector (+₱100/3hrs)</option>
+                        <option value="Extra Chairs" data-unit-price="0">Extra Chairs (Free)</option>
+                        <option value="Extension Cord" data-unit-price="0">Extension Cord (Free)</option>
+                        <option value="Microphone" data-unit-price="0">Microphone (Event Room only)</option>
+                        <option value="Speaker" data-unit-price="0">Speaker (Event Room only)</option>
                     </select>
                 </div>
 
@@ -453,36 +461,50 @@
 <div id="addTimeModal" class="modal-overlay">
     <div class="modal-container">
         <div class="modal-form-side">
-            <h3 class="section-title" id="extendModalTitle">Extend Session</h3>
-            <p class="text-muted modal-helper-text" id="extendModalNote">Add extra time or billing adjustments for active sessions.</p>
-            <div class="input-group">
-                <label class="form-label">Customer</label>
-                <p id="extendCustomer" class="info-value">---</p>
+            <h3 class="section-title" id="extendModalTitle" style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 0.25rem;">Extend Session</h3>
+            <p class="text-muted modal-helper-text" id="extendModalNote" style="margin-bottom: 1.5rem; font-size: 0.85rem; color: #64748b;">Add extra time or billing adjustments for active sessions.</p>
+            
+            <!-- Customer -->
+            <div class="input-group" style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; margin-bottom: 0.85rem !important;">
+                <label class="form-label" style="position: relative !important; float: none !important; margin: 0 !important; color: #64748b !important; font-size: 0.8rem !important; font-weight: 600 !important; text-transform: uppercase;">Customer</label>
+                <p id="extendCustomer" class="info-value" style="position: relative !important; float: none !important; margin: 0 !important; font-weight: 700 !important; color: #0f172a !important;">---</p>
             </div>
-            <div class="input-group">
-                <label class="form-label">Room</label>
-                <p id="extendRoom" class="info-value">---</p>
+
+            <!-- Room -->
+            <div class="input-group" style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; margin-bottom: 0.85rem !important;">
+                <label class="form-label" style="position: relative !important; float: none !important; margin: 0 !important; color: #64748b !important; font-size: 0.8rem !important; font-weight: 600 !important; text-transform: uppercase;">Room</label>
+                <p id="extendRoom" class="info-value" style="position: relative !important; float: none !important; margin: 0 !important; font-weight: 700 !important; color: #0f172a !important;">---</p>
             </div>
-            <div class="input-group">
-                <label class="form-label">Current End Time</label>
-                <p id="extendCurrentEnd" class="info-value">---</p>
+
+            <!-- Current End Time -->
+            <div class="input-group" style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; margin-bottom: 1rem !important;">
+                <label class="form-label" style="position: relative !important; float: none !important; margin: 0 !important; color: #64748b !important; font-size: 0.8rem !important; font-weight: 600 !important; text-transform: uppercase;">Current End Time</label>
+                <p id="extendCurrentEnd" class="info-value" style="position: relative !important; float: none !important; margin: 0 !important; font-weight: 700 !important; color: #0f172a !important;">---</p>
             </div>
-            <div class="input-group">
-                <label class="form-label">Add Hours</label>
-                <input type="number" id="extendHoursInput" class="modern-input" min="1" step="1" value="1">
+
+            <!-- Add Hours Input Box -->
+            <div class="input-group" style="display: flex !important; flex-direction: column !important; align-items: flex-start !important; width: 100% !important; margin-bottom: 1rem !important;">
+                <label class="form-label" style="position: relative !important; float: none !important; margin-bottom: 0.35rem !important; color: #64748b !important; font-size: 0.8rem !important; font-weight: 600 !important; text-transform: uppercase;">Add Hours</label>
+                <input type="number" id="extendHoursInput" class="modern-input" min="1" step="1" value="1" style="width: 100% !important; padding: 0.5rem 0.75rem !important; border: 1px solid #cbd5e1 !important; border-radius: 6px !important;">
             </div>
-            <div class="input-group">
-                <label class="form-label">Rate per Hour</label>
-                <p id="extendRate" class="info-value">₱0.00</p>
+
+            <!-- Rate per Hour -->
+            <div class="input-group" style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; margin-bottom: 0.85rem !important;">
+                <label class="form-label" style="position: relative !important; float: none !important; margin: 0 !important; color: #64748b !important; font-size: 0.8rem !important; font-weight: 600 !important; text-transform: uppercase;">Rate per Hour</label>
+                <p id="extendRate" class="info-value" style="position: relative !important; float: none !important; margin: 0 !important; font-weight: 700 !important; color: #0f172a !important;">₱0.00</p>
             </div>
-            <div class="input-group">
-                <label class="form-label">Original Total</label>
-                <p id="extendOriginalTotal" class="info-value">₱0.00</p>
+
+            <!-- Original Total -->
+            <div class="input-group" style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; margin-bottom: 0.85rem !important;">
+                <label class="form-label" style="position: relative !important; float: none !important; margin: 0 !important; color: #64748b !important; font-size: 0.8rem !important; font-weight: 600 !important; text-transform: uppercase;">Original Total</label>
+                <p id="extendOriginalTotal" class="info-value" style="position: relative !important; float: none !important; margin: 0 !important; font-weight: 700 !important; color: #0f172a !important;">₱0.00</p>
             </div>
-            <div class="input-group">
-                <label class="form-label">New Total</label>
-                <p id="extendUpdatedTotal" class="info-value">₱0.00</p>
-            </div>
+
+            <!-- New Total -->
+            <div class="input-group" style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; margin-bottom: 1.5rem !important;">
+                <label class="form-label" style="position: relative !important; float: none !important; margin: 0 !important; color: #64748b !important; font-size: 0.8rem !important; font-weight: 600 !important; text-transform: uppercase;">New Total</label>
+                <p id="extendUpdatedTotal" class="info-value" style="position: relative !important; float: none !important; margin: 0 !important; font-weight: 700 !important; color: #0f172a !important;">₱0.00</p>
+            </div>            
             <div class="modal-btn-group-row">
                 <button type="button" id="confirmExtendBtn" class="btn-confirm-blue">Confirm Extend</button>
                 <button type="button" id="closeExtendModalBtn" class="btn-cancel-red">Cancel</button>
@@ -492,13 +514,32 @@
             <div class="preview-border-box">
                 <h3 class="section-title">Extension Summary</h3>
                 <div class="preview-list">
-                    <div class="preview-item"><span class="preview-label">Customer</span><span id="extendSummaryCustomer">---</span></div>
-                    <div class="preview-item"><span class="preview-label">Room</span><span id="extendSummaryRoom">---</span></div>
-                    <div class="preview-item"><span class="preview-label">Added Hours</span><span id="extendSummaryHours">1</span></div>
-                    <div class="preview-item"><span class="preview-label">New End Time</span><span id="extendSummaryEnd">---</span></div>
-                    <div class="preview-item"><span class="preview-label">New Total Bill</span><span id="extendSummaryTotal">₱0.00</span></div>
+                    <div class="preview-item d-flex justify-content-between align-items-center border-bottom py-2">
+                        <span class="preview-label text-muted small position-relative" style="position: static !important; float: none !important;">Customer</span>
+                        <span id="extendSummaryCustomer" class="fw-bold">---</span>
+                    </div>
+                    
+                    <div class="preview-item d-flex justify-content-between align-items-center border-bottom py-2">
+                        <span class="preview-label text-muted small position-relative" style="position: static !important; float: none !important;">Room</span>
+                        <span id="extendSummaryRoom" class="fw-bold">---</span>
+                    </div>
+                    
+                    <div class="preview-item d-flex justify-content-between align-items-center border-bottom py-2">
+                        <span class="preview-label text-muted small position-relative" style="position: static !important; float: none !important;">Added Hours</span>
+                        <span id="extendSummaryHours" class="fw-bold">1</span>
+                    </div>
+                    
+                    <div class="preview-item d-flex justify-content-between align-items-center border-bottom py-2">
+                        <span class="preview-label text-muted small position-relative" style="position: static !important; float: none !important;">New End Time</span>
+                        <span id="extendSummaryEnd" class="fw-bold">---</span>
+                    </div>
+                    
+                    <div class="preview-item d-flex justify-content-between align-items-center py-2">
+                        <span class="preview-label text-muted small position-relative" style="position: static !important; float: none !important;">New Total Bill</span>
+                        <span id="extendSummaryTotal" class="fw-bold text-primary">₱0.00</span>
+                    </div>
                 </div>
-                <p class="text-muted modal-helper-text">This updates the reservation end time and total bill immediately for the fixed session.</p>
+                <p class="text-muted modal-helper-text mt-3 small">This updates the reservation end time and total bill immediately for the fixed session.</p>
             </div>
         </div>
     </div>

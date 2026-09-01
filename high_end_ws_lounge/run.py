@@ -24,7 +24,6 @@ from flask import Flask
 from sqlalchemy import inspect, text
 from time_utils import format_checkin_time, format_checkout_time, format_date, decimal_hours_to_readable
 
-
 def create_app(config_class=Config):
     root_dir = os.path.dirname(os.path.abspath(__file__))
     app = Flask(
@@ -34,7 +33,8 @@ def create_app(config_class=Config):
         static_url_path="/static",
     )
     app.config.from_object(config_class)
-
+    app.config['WTF_CSRF_ENABLED'] = False
+    
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
@@ -54,13 +54,13 @@ def create_app(config_class=Config):
     def ensure_default_rooms():
         with app.app_context():
             default_rooms = [
+                {"name": "Common Area", "base_rate": 35.0, "category": "solo"},
                 {"name": "Small Meeting Room", "base_rate": 50.0, "category": "meeting"},
                 {"name": "Lecture Room", "base_rate": 150.0, "category": "lecture"},
                 {"name": "Conference Room", "base_rate": 250.0, "category": "conference"},
                 {"name": "Comfy Room", "base_rate": 150.0, "category": "comfy"},
                 {"name": "Event Room 1", "base_rate": 300.0, "category": "event"},
                 {"name": "Event Room 2", "base_rate": 300.0, "category": "event"},
-                {"name": "Common Area", "base_rate": 35.0, "category": "solo"},
             ]
             for room_data in default_rooms:
                 if not Room.query.filter_by(name=room_data["name"]).first():
@@ -98,6 +98,13 @@ def create_app(config_class=Config):
                 db.session.execute(text("ALTER TABLE reservations ADD COLUMN receipt_image VARCHAR(255)"))
             if "approved_by_id" not in columns:
                 db.session.execute(text("ALTER TABLE reservations ADD COLUMN approved_by_id INTEGER"))
+            if "addon_subtotal" not in columns:
+                db.session.execute(text("ALTER TABLE reservations ADD COLUMN addon_subtotal FLOAT DEFAULT 0.0"))
+
+            if inspector.has_table("walkin_reservations"):
+                walkin_columns = {column["name"] for column in inspector.get_columns("walkin_reservations")}
+                if "addon_subtotal" not in walkin_columns:
+                    db.session.execute(text("ALTER TABLE walkin_reservations ADD COLUMN addon_subtotal FLOAT DEFAULT 0.0"))
 
             if inspector.has_table("solo_plans"):
                 solo_columns = {column["name"] for column in inspector.get_columns("solo_plans")}
@@ -124,10 +131,31 @@ def create_app(config_class=Config):
                 membership_columns = {column["name"] for column in inspector.get_columns("memberships")}
                 if "is_checked_in" not in membership_columns:
                     db.session.execute(text("ALTER TABLE memberships ADD COLUMN is_checked_in BOOLEAN DEFAULT 0"))
+                if "is_checked_out" not in membership_columns:
+                    db.session.execute(text("ALTER TABLE memberships ADD COLUMN is_checked_out BOOLEAN DEFAULT 0"))
                 if "updated_at" not in membership_columns:
                     db.session.execute(text("ALTER TABLE memberships ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"))
             
             db.session.commit()
+
+    def ensure_user_primary_key_integrity():
+        with app.app_context():
+            inspector = inspect(db.engine)
+            if not inspector.has_table("users"):
+                return
+
+            try:
+                zero_id_count = db.session.execute(text("SELECT COUNT(*) FROM users WHERE id = 0")).scalar()
+                if zero_id_count:
+                    db.session.execute(text("DELETE FROM users WHERE id = 0"))
+
+                db.session.execute(text("ALTER TABLE users MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT"))
+                max_id = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM users")).scalar()
+                db.session.execute(text(f"ALTER TABLE users AUTO_INCREMENT = {max_id + 1}"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                raise
 
     def ensure_default_admin():
         with app.app_context():
@@ -144,6 +172,7 @@ def create_app(config_class=Config):
 
     ensure_payment_columns()
     ensure_membership_tables()
+    ensure_user_primary_key_integrity()
     ensure_default_rooms()
     cleanup_test_rooms()
     ensure_default_admin()
@@ -182,11 +211,13 @@ def seed_db():
     # Rooms
     if not Room.query.first():
         rooms = [
-            Room(name="Conference Room", base_rate=50.0, category="conference"),
-            Room(name="Room 101", base_rate=35.0, category="standard"),
-            Room(name="Room 102", base_rate=50.0, category="premium"),
-            Room(name="Sleeping Pod", base_rate=100.0, category="pod"),
-            Room("Common Area", base_rate=35.0, category="solo"),
+            Room(name="Common Area", base_rate=35.0, category="solo"),
+            Room(name="Small Meeting Room", base_rate=50.0, category="meeting"),
+            Room(name="Lecture Room", base_rate=150.0, category="lecture"),
+            Room(name="Conference Room", base_rate=250.0, category="conference"),
+            Room(name="Comfy Room", base_rate=150.0, category="comfy"),
+            Room(name="Event Room 1", base_rate=300.0, category="event"),
+            Room(name="Event Room 2", base_rate=300.0, category="event"),
         ]
         for room in rooms:
             db.session.add(room)
@@ -325,4 +356,4 @@ def migrate_payment_columns():
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=False, use_reloader=False)

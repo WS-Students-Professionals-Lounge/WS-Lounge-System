@@ -29,9 +29,7 @@ def create_addons_blueprint(addon_bp=None):
     if addon_bp is None:
         addon_bp = Blueprint('addons_api', __name__, url_prefix='/api/addons')
     
-    # =====================================================================
     # GET ENDPOINTS
-    # =====================================================================
     
     @addon_bp.route('/', methods=['GET'])
     def get_addons():
@@ -82,9 +80,7 @@ def create_addons_blueprint(addon_bp=None):
                 'message': f'Failed to fetch add-on: {str(e)}'
             }), 500
 
-    # =====================================================================
     # POST ENDPOINTS
-    # =====================================================================
     
     @addon_bp.route('/create', methods=['POST'])
     @login_required
@@ -245,9 +241,7 @@ def create_addons_blueprint(addon_bp=None):
                 'message': f'Failed to delete add-on: {str(e)}'
             }), 500
 
-    # =====================================================================
     # RESERVATION ADD-ONS ENDPOINTS
-    # =====================================================================
     
     @addon_bp.route('/reservation/<int:reservation_id>', methods=['GET'])
     def get_reservation_addons(reservation_id):
@@ -380,9 +374,7 @@ def create_addons_blueprint(addon_bp=None):
                 'message': f'Failed to remove add-on: {str(e)}'
             }), 500
 
-    # =====================================================================
     # WALK-IN ADD-ONS ENDPOINTS
-    # =====================================================================
     
     @addon_bp.route('/walkin/<int:walkin_id>', methods=['GET'])
     def get_walkin_addons(walkin_id):
@@ -492,6 +484,7 @@ def create_addons_blueprint(addon_bp=None):
             db.session.delete(walkin_addon)
             
             # Update walk-in addon_subtotal
+
             walkin = WalkinReservation.query.get(walkin_id)
             total_addon_subtotal = db.session.query(func.sum(WalkinAddOn.subtotal)).filter_by(walkin_reservation_id=walkin_id).scalar() or 0
             walkin.addon_subtotal = total_addon_subtotal
@@ -509,9 +502,7 @@ def create_addons_blueprint(addon_bp=None):
                 'message': f'Failed to remove add-on: {str(e)}'
             }), 500
 
-    # =====================================================================
     # REPORTS ENDPOINTS
-    # =====================================================================
     
     @addon_bp.route('/report/revenue', methods=['GET'])
     @login_required

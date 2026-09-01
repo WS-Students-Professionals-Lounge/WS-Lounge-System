@@ -15,22 +15,19 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from sqlalchemy import and_, func, inspect, or_, text
 from werkzeug.security import check_password_hash, generate_password_hash
-from wtforms import BooleanField, DateField, DateTimeField, DecimalField, HiddenField, IntegerField, PasswordField, \
-    SelectField, StringField, SubmitField, TextAreaField, TimeField
+from wtforms import BooleanField, DateField, DecimalField, HiddenField, IntegerField, PasswordField,     SelectField, StringField, SubmitField, TextAreaField, TimeField
+from wtforms.fields import DateTimeField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, Optional
 
 load_dotenv()
 
-# ---------------------------------------------------------------------------
 # Config
-# ---------------------------------------------------------------------------
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-change-in-prod"
     SQLALCHEMY_DATABASE_URI = (
         os.environ.get("SQLALCHEMY_DATABASE_URI")
-        or f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
+        or "mysql://root:@localhost/ws_lounge_lapaz?charset=utf8mb4"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -46,18 +43,16 @@ class Config:
     POSTS_PER_PAGE = 25
 
 
-# ---------------------------------------------------------------------------
 # Extensions (initialized in run.py via init_app)
-# ---------------------------------------------------------------------------
+
 db = SQLAlchemy()
 login_manager = LoginManager()
 socketio = SocketIO(cors_allowed_origins="*")
 mail = Mail()
 
 
-# ---------------------------------------------------------------------------
 # ID Generator Helper Functions
-# ---------------------------------------------------------------------------
+
 def generate_customer_id(room_type="common"):
     """
     Generate a customer-facing ID based on the type.
@@ -67,16 +62,16 @@ def generate_customer_id(room_type="common"):
     if room_type.lower() == "common area":
         # Find next available ID in range 1-50
         existing_ids = set()
-        existing_ids.update(
-            [u.customer_id for u in User.query.filter(User.customer_id.between(1, 50)).all() if u.customer_id]
-        )
-        existing_ids.update(
-            [r.customer_id for r in Reservation.query.filter(Reservation.customer_id.between(1, 50)).all() if r.customer_id]
-        )
-        existing_ids.update(
-            [s.customer_id for s in SoloPlan.query.filter(SoloPlan.customer_id.between(1, 50)).all() if s.customer_id]
-        )
-
+        existing_ids.update([u.customer_id for u in User.query.filter(
+            User.customer_id.between(1, 50)
+        ).all() if u.customer_id])
+        existing_ids.update([r.customer_id for r in Reservation.query.filter(
+            Reservation.customer_id.between(1, 50)
+        ).all() if r.customer_id])
+        existing_ids.update([s.customer_id for s in SoloPlan.query.filter(
+            SoloPlan.customer_id.between(1, 50)
+        ).all() if s.customer_id])
+        
         for i in range(1, 51):
             if i not in existing_ids:
                 return i
@@ -84,16 +79,16 @@ def generate_customer_id(room_type="common"):
     else:
         # Find next available ID in range 100-999
         existing_ids = set()
-        existing_ids.update(
-            [u.customer_id for u in User.query.filter(User.customer_id.between(100, 999)).all() if u.customer_id]
-        )
-        existing_ids.update(
-            [r.customer_id for r in Reservation.query.filter(Reservation.customer_id.between(100, 999)).all() if r.customer_id]
-        )
-        existing_ids.update(
-            [s.customer_id for s in SoloPlan.query.filter(SoloPlan.customer_id.between(100, 999)).all() if s.customer_id]
-        )
-
+        existing_ids.update([u.customer_id for u in User.query.filter(
+            User.customer_id.between(100, 999)
+        ).all() if u.customer_id])
+        existing_ids.update([r.customer_id for r in Reservation.query.filter(
+            Reservation.customer_id.between(100, 999)
+        ).all() if r.customer_id])
+        existing_ids.update([s.customer_id for s in SoloPlan.query.filter(
+            SoloPlan.customer_id.between(100, 999)
+        ).all() if s.customer_id])
+        
         for i in range(100, 1000):
             if i not in existing_ids:
                 return i
@@ -101,37 +96,15 @@ def generate_customer_id(room_type="common"):
 
 
 def get_common_area_count():
-    """Get the current count of active Common Area users.
-
-    This counts active Common Area reservations and active membership check-ins
-    so capacity reflects actual occupancy instead of reserved or historical IDs.
-    """
-    now = datetime.now()
-
-    active_reservations = Reservation.query.join(Room).filter(
-        Room.name.ilike("common area"),
-        Reservation.status.in_(["Confirmed", "Walk-in"]),
-        or_(
-            and_(Reservation.is_open_time == True, Reservation.start_time <= now),
-            and_(
-                Reservation.is_open_time == False,
-                Reservation.start_time <= now,
-                Reservation.end_time > now,
-            ),
-        ),
+    """Get the current count of active Common Area users."""
+    return Reservation.query.filter(
+        Reservation.customer_id.between(1, 50),
+        Reservation.status.in_(["Confirmed", "Pending", "Walk-in"])
     ).count()
 
-    membership_checkins = Membership.query.filter(
-        Membership.is_checked_in == True,
-        Membership.status == "active",
-    ).count()
 
-    return active_reservations + membership_checkins
-
-
-# ---------------------------------------------------------------------------
 # Models
-# ---------------------------------------------------------------------------
+
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
@@ -145,31 +118,9 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    reservations = db.relationship(
-        "Reservation",
-        backref="user",
-        lazy="dynamic",
-        foreign_keys="Reservation.user_id",
-    )
-    approved_reservations = db.relationship(
-        "Reservation",
-        foreign_keys="Reservation.approved_by_id",
-        backref="approved_by",
-    )
-    solo_plans = db.relationship(
-        "SoloPlan",
-        backref="user",
-        lazy="dynamic",
-        foreign_keys="SoloPlan.user_id",
-    )
-    approved_solo_plans = db.relationship(
-        "SoloPlan",
-        foreign_keys="SoloPlan.approved_by_id",
-        backref="approved_by_user",
-        lazy="dynamic",
-    )
+    reservations = db.relationship("Reservation", backref="user", lazy="dynamic")
+    solo_plans = db.relationship("SoloPlan", backref="user", lazy="dynamic")
     time_logs = db.relationship("TimeLog", backref="user", lazy="dynamic")
-    activity_logs = db.relationship("UserActivityLog", backref="user", lazy="dynamic")
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
@@ -185,29 +136,6 @@ class User(UserMixin, db.Model):
             .scalar()
         )
         return total or 0
-
-    @property
-    def latest_deactivation_log(self):
-        return (
-            self.activity_logs
-            .filter(UserActivityLog.activity_type.ilike("deactivated%"))
-            .order_by(UserActivityLog.activity_time.desc())
-            .first()
-        )
-
-    @property
-    def last_deactivated_at(self):
-        log = self.latest_deactivation_log
-        return log.activity_time if log else None
-
-    @property
-    def last_deactivation_reason(self):
-        log = self.latest_deactivation_log
-        if not log:
-            return None
-        if "|" in log.activity_type:
-            return log.activity_type.split("|", 1)[1]
-        return log.activity_type
 
     def __repr__(self):
         return f"<User {self.name}>"
@@ -244,7 +172,6 @@ class Reservation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, unique=True, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-    approved_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     room_id = db.Column(db.Integer, db.ForeignKey("rooms.id"), nullable=False)
     customer_name = db.Column(db.String(64))
     contact_number = db.Column(db.String(20))
@@ -257,9 +184,6 @@ class Reservation(db.Model):
     is_open_time = db.Column(db.Boolean, default=False)
     status = db.Column(db.String(20), default="Pending")
     total_amount = db.Column(db.Float, default=0.0)
-    amount_paid = db.Column(db.Float, default=0.0)
-    payment_method = db.Column(db.String(50))
-    receipt_image = db.Column(db.String(255))
     paid = db.Column(db.Boolean, default=False)
     added_by = db.Column(db.String(64))
     extra_notes = db.Column(db.String(255))
@@ -268,16 +192,7 @@ class Reservation(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     walkin = db.relationship(
-        "WalkinReservation",
-        backref="reservation",
-        uselist=False,
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-    approved_by = db.relationship(
-        "User",
-        foreign_keys=[approved_by_id],
-        backref="approved_reservations",
+        "WalkinReservation", backref="reservation", uselist=False
     )
 
     @staticmethod
@@ -315,28 +230,12 @@ class Reservation(db.Model):
         return f"<Reservation {self.id}>"
 
 
-class PaymentInfo(db.Model):
-    __tablename__ = "payment_info"
-
-    id = db.Column(db.Integer, primary_key=True)
-    method = db.Column(db.String(32), unique=True, nullable=False)
-    account_name = db.Column(db.String(128))
-    account_number = db.Column(db.String(64))
-    qr_image = db.Column(db.String(255))
-    instructions = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    def __repr__(self):
-        return f"<PaymentInfo {self.method}>"
-
-
 class WalkinReservation(db.Model):
     __tablename__ = "walkin_reservations"
 
     id = db.Column(db.Integer, primary_key=True)
     reservation_id = db.Column(
-        db.Integer, db.ForeignKey("reservations.id", ondelete="CASCADE"), nullable=False
+        db.Integer, db.ForeignKey("reservations.id"), nullable=False
     )
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     room_id = db.Column(db.Integer, db.ForeignKey("rooms.id"), nullable=False)
@@ -363,18 +262,15 @@ class SoloPlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, unique=True, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    approved_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     plan_name = db.Column(db.String(64), nullable=False)
     status = db.Column(db.String(20), default="Pending")
-    payment_method = db.Column(db.String(50))
-    receipt_image = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expiry_date = db.Column(db.DateTime)
 
     @property
     def is_active(self):
         if self.expiry_date:
-            return datetime.now() < self.expiry_date
+            return datetime.utcnow() < self.expiry_date
         return self.status.lower() == "approved"
 
     def set_expiry_date(self):
@@ -432,58 +328,8 @@ class UserActivityLog(db.Model):
     ip_address = db.Column(db.String(45))
 
 
-class Membership(db.Model):
-    __tablename__ = "memberships"
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True)
-    status = db.Column(db.String(20), default="pending")  # pending, active, expired
-    start_date = db.Column(db.DateTime, default=datetime.utcnow)
-    expiry_date = db.Column(db.DateTime, nullable=False)
-    total_hours = db.Column(db.Float, default=0.0)  # Total hours credited
-    hours_left = db.Column(db.Float, default=0.0)  # Remaining hours
-    plan_name = db.Column(db.String(100))  # Solo plan name
-    is_checked_in = db.Column(db.Boolean, default=False)  # Current session status
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    user = db.relationship("User", backref="membership", uselist=False)
-    attendance_logs = db.relationship("AttendanceLog", backref="membership", lazy="dynamic", cascade="all, delete-orphan")
-
-    @property
-    def is_active(self):
-        """Check if membership is active based on expiry_date"""
-        return self.status == "active" and datetime.utcnow() < self.expiry_date
-
-    def __repr__(self):
-        return f"<Membership {self.user_id} - {self.status}>"
-
-
-class AttendanceLog(db.Model):
-    __tablename__ = "attendance_logs"
-
-    id = db.Column(db.Integer, primary_key=True)
-    membership_id = db.Column(db.Integer, db.ForeignKey("memberships.id"), nullable=False)
-    check_in_time = db.Column(db.DateTime, nullable=False)
-    check_out_time = db.Column(db.DateTime)
-    hours_deducted = db.Column(db.Float, default=0.0)  # Calculated on check-out
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    @property
-    def session_duration_hours(self):
-        """Calculate duration in hours between check-in and check-out"""
-        if self.check_out_time:
-            delta = self.check_out_time - self.check_in_time
-            return delta.total_seconds() / 3600  # Convert seconds to hours
-        return 0.0
-
-    def __repr__(self):
-        return f"<AttendanceLog {self.membership_id} - {self.check_in_time}>"
-
-
-# ---------------------------------------------------------------------------
 # Forms
-# ---------------------------------------------------------------------------
+
 class LoginForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired(), Email()])
     password = PasswordField("Password", validators=[DataRequired()])
@@ -517,14 +363,16 @@ class ReservationForm(FlaskForm):
         "Start Time", format="%Y-%m-%dT%H:%M", validators=[DataRequired()]
     )
     end_time = DateTimeField(
-        "End Time", format="%Y-%m-%dT%H:%M", validators=[Optional()]
+        "End Time", format="%Y-%m-%dT%H:%M", validators=[DataRequired()]
     )
-    is_open_time = BooleanField("Open Time")
     extra_notes = TextAreaField("Notes")
     submit = SubmitField("Reserve")
 
 
 class AdminReservationForm(FlaskForm):
+    start_date = DateField(
+        "Start Date", format="%Y-%m-%d", validators=[DataRequired()]
+    )
     room_id = SelectField("Room", coerce=int, validators=[DataRequired()])
     customer_name = StringField(
         "Customer Name", validators=[DataRequired(), Length(min=2)]
@@ -533,12 +381,8 @@ class AdminReservationForm(FlaskForm):
     pax_count = IntegerField(
         "Pax Count", default=1, validators=[NumberRange(min=1)]
     )
-    start_time = DateTimeField(
-        "Start Time", format="%Y-%m-%dT%H:%M", validators=[Optional()]
-    )
-    end_time = DateTimeField(
-        "End Time", format="%Y-%m-%dT%H:%M", validators=[Optional()]
-    )
+    start_time = TimeField("Start Time", validators=[DataRequired()])
+    end_time = TimeField("End Time", validators=[Optional()])
     extra_fee = DecimalField(
         "Extra Fee (₱)", default=0.00, validators=[Optional()]
     )
@@ -565,12 +409,8 @@ class WalkinForm(FlaskForm):
         "Select Area", coerce=int, validators=[DataRequired()]
     )
     pax_count = IntegerField("No. of Pax", default=1)
-    start_time = DateTimeField(
-        "Start Time", format="%Y-%m-%dT%H:%M", validators=[Optional()]
-    )
-    end_time = DateTimeField(
-        "End Time", format="%Y-%m-%dT%H:%M", validators=[Optional()]
-    )
+    start_time = TimeField("Start Time", validators=[Optional()])
+    end_time = TimeField("End Time", validators=[Optional()])
     extra_notes = TextAreaField("Staff Notes")
     extra_fee = DecimalField("Additional Fees", default=0.0)
     open_time = BooleanField("Open Time")

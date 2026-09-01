@@ -374,7 +374,13 @@ body {
 }
 
 /* Responsive Design */
-@media (max-width: 1024px) {
+@media (min-width: 900px) {
+    .staff-grid {
+        grid-template-columns: 1fr 1.3fr;
+    }
+}
+
+@media (max-width: 899.98px) {
     .staff-grid {
         grid-template-columns: 1fr;
     }

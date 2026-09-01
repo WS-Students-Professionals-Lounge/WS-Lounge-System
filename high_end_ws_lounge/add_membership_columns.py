@@ -29,5 +29,5 @@ for member in members:
 db.session.commit()
 print(f'✅ Generated membership_id for {len(members)} existing members')
 
-print('🎉 DB ready for members admin!')
+print('DB ready for members admin!')
 

@@ -1,42 +1,42 @@
 {% extends "base.html" %}
 
+
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/members.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}
 
 {% block content %}
 <div class="members-main-wrapper">
     <div class="members-page-header">
         <h2 class="page-title">All Members</h2>
-        <span class="current-date-display" id="currentDateDisplay">Friday, April 2, 2026</span>
+        <span class="current-date-display" id="currentDateDisplay">{{ now.strftime('%A, %B %d, %Y') if now else 'Today' }}</span>
     </div>
 
-    <!-- Tab Navigation based on image_fcc278.png -->
+    <!-- Tab Navigation -->
     <div class="members-tabs-container">
         <div class="tabs-nav">
-            <button class="tab-btn {{ 'active' if active_tab == 'requests' else '' }}" data-tab="requests">Membership Requests</button>
+            <button class="tab-btn {{ 'active' if active_tab == 'requests' or not active_tab else '' }}" data-tab="requests">Membership Requests</button>
             <button class="tab-btn {{ 'active' if active_tab == 'list' else '' }}" data-tab="list">Member List</button>
             <button class="tab-btn {{ 'active' if active_tab == 'deactivated' else '' }}" data-tab="deactivated">Deactivated Accounts</button>
         </div>
     </div>
 
     <!-- Tab Contents -->
-        <div class="tab-content-wrapper">
+    <div class="tab-content-wrapper">
 
-        <!-- Tab 1: Membership Requests (image_fcc278.png) -->
-        <div id="requests" class="tab-panel {{ 'active' if active_tab == 'requests' else '' }}">
+        <!-- Tab 1: Membership Requests -->
+        <div id="requests" class="tab-panel {{ 'active' if active_tab == 'requests' or not active_tab else '' }}">
 
             <div class="panel-header-action">
                 <p class="priority-label">Prioritize by: <strong>Date Requested</strong></p>
             </div>
             
-<div class="requests-list" id="requestsList">
-                {# Show only pending requests; prepare data-attributes for client-side use #}
-                {# status may be stored as "pending" or "Pending" depending on seeding/DB casing #}
+            <div class="requests-list" id="requestsList">
                 {% set pending_requests = (membership_requests|default([]))|selectattr('status','in',['pending','Pending'])|list %}
                 {% if pending_requests and pending_requests|length > 0 %}
                     {% for request in pending_requests %}
-<div class="request-card" data-request='{{ request.id }}'>
+                    <div class="request-card" data-request-id="{{ request.id }}">
                         <div class="request-info">
                             <h3 class="customer-name">{{ request.user.name }}</h3>
                             <p class="detail-text">Email: {{ request.user.email }}</p>
@@ -45,14 +45,15 @@
                         <div class="request-plan">
                             <h4 class="column-title">Selected Plan</h4>
                             <p class="plan-name">{{ request.plan_name }}</p>
-                            <p class="detail-text">Date Requested: {{ request.created_at.strftime('%m/%d/%y - %I:%M %p') }}</p>
+                            <p class="detail-text">Date Requested: {{ request.created_at.strftime('%m/%d/%y - %I:%M %p') if request.created_at else 'N/A' }}</p>
                         </div>
                         <div class="request-payment">
                             <h4 class="column-title">Payment Verification</h4>
+                            {% set receipt_path = request.receipt_image if request.receipt_image and request.receipt_image.startswith('/') else url_for('static', filename='uploads/receipts/' ~ (request.receipt_image or '')) %}
                             <button
                                 class="btn-check-receipt"
                                 type="button"
-                                data-receipt-url="{% if request.receipt_image %}{{ url_for('static', filename='uploads/receipts/' ~ request.receipt_image) }}{% else %}{% endif %}"
+                                data-receipt-url="{{ receipt_path if request.receipt_image else '' }}"
                                 data-request-name="{{ request.user.name|e }}"
                             >
                                 Check
@@ -76,8 +77,7 @@
             </div>
         </div>
 
-
-        <!-- Tab 3: Member List (image_fc6849.png) -->
+        <!-- Tab 2: Member List -->
         <div id="list" class="tab-panel {{ 'active' if active_tab == 'list' else '' }}">
             <div class="list-controls">
                 <div class="list-title-group">
@@ -102,45 +102,211 @@
                             <span>Active</span>
                         </div>
                     </div>
+                    
                     <div class="member-main-info">
                         <h3 class="member-name">{{ member.name }}</h3>
                         <p class="member-id-tag">WS-WLK-{{ member.id }}</p>
                         <p class="detail-text">Email: {{ member.email }}</p>
                         <p class="detail-text">Contact: {{ member.phone or 'N/A' }}</p>
                     </div>
+                    
                     <div class="member-plan-summary">
-                        <p class="detail-text">Plan: {{ member.membership.plan_name if member.membership else 'No assigned membership' }}</p>
-                        {% if member.membership %}
-                        <p class="detail-text">Status: {{ 'Checked in' if member.membership.is_checked_in else 'Ready to check in' }}</p>
+                    <p class="detail-text">Plan: {{ member.membership.plan_name if member.membership else 'Solo Plan' }}</p>
+                    <p class="detail-text">
+                        Status: 
+                        {% if member.membership and member.membership.is_checked_in %}
+                            <span style="color: #28a745; font-weight: bold;">Checked In</span>
+                        {% elif member.membership and member.membership.is_checked_out %}
+                            <span style="color: #6c757d; font-weight: bold;">Checked Out</span>
+                        {% else %}
+                            <span>Ready to check in</span>
                         {% endif %}
-                    </div>
-                    <div class="member-card-actions">
-                        <div class="session-action-group">
-                            <button
-                                class="btn-check-in"
-                                type="button"
-                                data-membership-id="{{ member.membership.id if member.membership else '' }}"
-                                data-is-checked-in="{{ 'true' if member.membership and member.membership.is_checked_in else 'false' }}"
-                                {% if not member.membership or not member.membership.is_active %}disabled{% endif %}
-                            >
-                                {{ 'End Session' if member.membership and member.membership.is_checked_in else 'Check In' }}
-                            </button>
-                            <button
-                                class="btn-view-records"
-                                type="button"
-                                data-membership-id="{{ member.membership.id if member.membership else '' }}"
-                            >
-                                View Records
-                            </button>
-                        </div>
-                        <div class="manage-action-group">
-                            <button class="btn-renew" type="button" data-user-id="{{ member.id }}">Renew Membership</button>
-                            <button class="btn-deactivate" type="button" data-user-id="{{ member.id }}">Deactivate Account</button>
-                        </div>
-                    </div>
+                    </p>
                 </div>
-                    {% endif %}
-                {% endfor %}
+
+                <!-- ACTION BUTTONS CONTAINER -->
+                <div class="member-card-actions" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="session-action-group" style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+                        
+                        {% if member.membership and member.membership.is_checked_in %}
+                            <!-- STATE 1: CURRENTLY CHECKED IN -->
+                            <button class="btn-check-in disabled-btn" type="button" disabled style="background-color: #10b981; color: #ffffff; opacity: 0.65; cursor: not-allowed; width: 100%;">
+                                Checked In
+                            </button>
+                            <button type="button" 
+                                    class="btn-deactivate" 
+                                    style="width: 100%; background-color: #dc3545; color: white;" 
+                                    onclick="handleCheckout('{{ member.id }}')">
+                                Check-Out Customer
+                            </button>
+
+                        {% elif member.membership and member.membership.is_checked_out and not (member.id in approved_solo_user_ids) %}
+                            <!-- STATE 2: CHECKED OUT & WALA NA SANG ACTIVE/NEW SOLO PLAN -->
+                            <button type="button" class="btn-deactivate" style="width: 100%; opacity: 0.65; cursor: not-allowed; background-color: #dc3545; color: white;" disabled>
+                                Checked Out
+                            </button>
+
+                        {% else %}
+                            <!-- STATE 3: HAS ACTIVE / NEW SOLO PLAN -> ALWAYS SHOW CHECK IN -->
+                            <button class="btn-check-in btn-action" 
+                                    type="button" 
+                                    data-user-id="{{ member.id }}" 
+                                    data-membership-id="{{ member.membership.id if member.membership else member.id }}" 
+                                    data-is-checked-in="false" 
+                                    style="width: 100%; background-color: #10b981; color: #ffffff; cursor: pointer;">
+                                Check In
+                            </button>
+                        {% endif %}
+                            <script>
+                                function handleCheckout(userId) {
+                                    // Nagagamit na sang SweetAlert2 Modal
+                                    Swal.fire({
+                                        title: 'Check Out',
+                                        text: 'Check out this member now?',
+                                        icon: 'question',
+                                        showCancelButton: true,
+                                        confirmButtonColor: '#7367f0', // Violet color sang Confirm button niyo
+                                        cancelButtonColor: '#6e7881',  // Dark gray sang Cancel button niyo
+                                        confirmButtonText: 'Confirm',
+                                        cancelButtonText: 'Cancel'
+                                    }).then((result) => {
+                                        // Kon i-click sang user ang "Confirm"
+                                        if (result.isConfirmed) {
+                                            fetch(`/admin/api/member/${userId}/check-out`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' }
+                                            })
+                                            .then(res => res.json())
+                                            .then(data => {
+                                                if (data.status === 'success') {
+                                                    Swal.fire({
+                                                        title: 'Success!',
+                                                        text: data.message,
+                                                        icon: 'success',
+                                                        timer: 1500,
+                                                        showConfirmButton: false
+                                                    }).then(() => {
+                                                        location.reload(); // Re-loads page cleanly
+                                                    });
+                                                } else {
+                                                    Swal.fire('Error!', data.message, 'error');
+                                                }
+                                            })
+                                            .catch(err => {
+                                                console.error(err);
+                                                Swal.fire('Error!', 'Something went wrong.', 'error');
+                                            });
+                                        }
+                                    });
+                                }
+                                </script>
+
+                        <!-- VIEW RECORDS BUTTON -->
+                        <button
+                            class="btn-view-records"
+                            type="button"
+                            data-user-id="{{ member.id }}"
+                            data-membership-id="{{ member.membership.id if member.membership else '' }}"
+                        >
+                            View Records
+                        </button>
+
+                        <div class="manage-action-group" style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+                            {% if member.membership and member.membership.is_checked_in %}
+                                <!-- KON CHECKED IN: Faded & Disabled Button -->
+                                <button type="button" class="btn renew-btn" style="width: 170%; font-weight: bold; background-color: #153d70; color: white; opacity: 0.65; cursor: not-allowed;" disabled>
+                                    Renew Membership
+                                </button>
+                            {% else %}
+                                <!-- KON CHECKED OUT (o INDI CHECKED IN): Clickable Button -->
+                                <button class="btn renew-btn btn-action" 
+                                        type="button" 
+                                        onclick="renewMember('{{ member.id }}')"
+                                        data-user-id="{{ member.id }}"
+                                        style="width: 170%; font-weight: bold; background-color: #153d70; color: white; cursor: pointer;">
+                                    Renew Membership
+                                </button>
+                            <script>
+                                function renewMember(memberId) {
+                                if (!memberId) return;
+
+                                fetch('/admin/renew_member', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ user_id: memberId })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.status === 'success') {
+                                        // I-display ang Static Flash Banner (No Timer)
+                                        showStaticFlashBanner(data.message, 'success');
+                                    } else {
+                                        showStaticFlashBanner(data.message || 'Renewal failed', 'danger');
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
+                                    showStaticFlashBanner('An error occurred during renewal.', 'danger');
+                                });
+                            }
+
+                            function showStaticFlashBanner(message, category) {
+                                // 1. Kuhaon o himuan sang container sa screen
+                                let container = document.getElementById('flash-message-container');
+                                if (!container) {
+                                    container = document.createElement('div');
+                                    container.id = 'flash-message-container';
+                                    container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 480px; width: 90%;';
+                                    document.body.appendChild(container);
+                                }
+                                container.innerHTML = '';
+
+                                const isSuccess = category === 'success';
+                                const bgColor = isSuccess ? '#d1e7dd' : '#f8d7da';
+                                const textColor = isSuccess ? '#0f5132' : '#842029';
+                                const borderColor = isSuccess ? '#badbcc' : '#f5c2c7';
+
+                                // 2. Himoon ang Banner Element
+                                const alertBox = document.createElement('div');
+                                alertBox.style.cssText = `
+                                    background-color: ${bgColor};
+                                    color: ${textColor};
+                                    border: 1px solid ${borderColor};
+                                    padding: 16px;
+                                    border-radius: 8px;
+                                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                                    font-family: Arial, sans-serif;
+                                `;
+
+                                // 3. Inner HTML (Pure Text Message + Manual Close Buttons)
+                                alertBox.innerHTML = `
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                                        <div style="font-weight: bold; font-size: 14px; line-height: 1.4;">
+                                            ${isSuccess ? '⚠️ ' : '❌ '} ${message}
+                                        </div>
+                                        <button onclick="closeBannerAndRefresh()" style="background: none; border: none; font-size: 20px; font-weight: bold; cursor: pointer; color: ${textColor}; line-height: 1;">✕</button>
+                                    </div>
+                                `;
+
+                                container.appendChild(alertBox);
+                            }
+
+                            // Function para mag-close sang banner kag mag-refresh lang kon i-click sang Admin
+                            function closeBannerAndRefresh() {
+                                location.reload();
+                            }
+                            </script>
+                            {% endif %}
+
+                            <button class="btn-deactivate" type="button" data-user-id="{{ member.id }}">Deactivate</button>
+                        </div>
+                        </div>
+                        </div>
+                            {% endif %}
+                        {% endfor %}
+
                 {% if ns.count == 0 %}
                 <div class="no-data-placeholder">
                     <p>No official members found.</p>
@@ -149,6 +315,7 @@
             </div>
         </div>
 
+        <!-- Tab 3: Deactivated Accounts -->
         <div id="deactivated" class="tab-panel {{ 'active' if active_tab == 'deactivated' else '' }}">
             <div class="list-controls">
                 <div class="list-title-group">
@@ -168,47 +335,57 @@
             </div>
 
             <div class="members-card-list">
-                {% set deactivated_members = members|rejectattr('is_active')|list %}
-                {% for member in deactivated_members %}
-                <div class="member-list-card deactivated-card" data-searchable="{{ member.name }} {{ member.email }} WS-WLK-{{ member.id }} {{ member.last_deactivation_reason or 'Manual deactivation' }}" data-deactivated-date="{{ member.last_deactivated_at.strftime('%Y-%m-%d') if member.last_deactivated_at else '' }}">
-                    <div class="member-status-icon">
-                        <div class="status-indicator-box inactive">
-                            <i class="fas fa-user-slash"></i>
-                            <span>Inactive</span>
-                        </div>
-                    </div>
-                    <div class="member-main-info">
-                        <h3 class="member-name">{{ member.name }}</h3>
-                        <p class="member-id-tag">WS-WLK-{{ member.id }}</p>
-                        <p class="detail-text">Email: {{ member.email }}</p>
-                        <p class="detail-text">Contact: {{ member.phone or 'N/A' }}</p>
-                    </div>
-                    <div class="member-stats">
-                        <div class="stat-item">
-                            <i class="fas fa-calendar-alt"></i>
-                            <div class="stat-content">
-                                <span class="stat-label">Deactivated On</span>
-                                <span class="stat-value">{{ member.last_deactivated_at.strftime('%b %d, %Y') if member.last_deactivated_at else 'Unknown' }}</span>
+                {% set deactivated_members = [] %}
+                {% for m in members %}
+                    {% if not m.is_active %}
+                        {% set _ = deactivated_members.append(m) %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% if deactivated_members and deactivated_members|length > 0 %}
+                    {% for member in deactivated_members %}
+                    <div class="member-list-card deactivated-card" 
+                         data-searchable="{{ member.name }} {{ member.email }} WS-WLK-{{ member.id }} {{ member.last_deactivation_reason or 'Manual deactivation' }}" 
+                         data-deactivated-date="{{ member.last_deactivated_at.strftime('%Y-%m-%d') if member.last_deactivated_at else '' }}">
+                        <div class="member-status-icon">
+                            <div class="status-indicator-box inactive">
+                                <i class="fas fa-user-slash"></i>
+                                <span>Inactive</span>
                             </div>
                         </div>
-                        <div class="stat-item">
-                            <i class="fas fa-flag"></i>
-                            <div class="stat-content">
-                                <span class="stat-label">Reason</span>
-                                <span class="stat-value">{{ member.last_deactivation_reason or 'Manual soft deactivation' }}</span>
+                        <div class="member-main-info">
+                            <h3 class="member-name">{{ member.name }}</h3>
+                            <p class="member-id-tag">WS-WLK-{{ member.id }}</p>
+                            <p class="detail-text">Email: {{ member.email }}</p>
+                            <p class="detail-text">Contact: {{ member.phone or 'N/A' }}</p>
+                        </div>
+                        <div class="member-stats">
+                            <div class="stat-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <div class="stat-content">
+                                    <span class="stat-label">Deactivated On</span>
+                                    <span class="stat-value">{{ member.last_deactivated_at.strftime('%b %d, %Y') if member.last_deactivated_at else 'Unknown' }}</span>
+                                </div>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-flag"></i>
+                                <div class="stat-content">
+                                    <span class="stat-label">Reason</span>
+                                    <span class="stat-value">{{ member.last_deactivation_reason or 'Manual soft deactivation' }}</span>
+                                </div>
                             </div>
                         </div>
+                        <div class="member-card-actions">
+                            <button class="btn-reactivate" type="button" data-user-id="{{ member.id }}" data-user-name="{{ member.name|e }}">Reactivate</button>
+                            <button class="btn-delete-member" type="button" data-user-id="{{ member.id }}" data-user-name="{{ member.name|e }}">Permanent Delete</button>
+                        </div>
                     </div>
-                    <div class="member-card-actions">
-                        <button class="btn-reactivate" type="button" data-user-id="{{ member.id }}">Reactivate</button>
-                        <button class="btn-delete-member" type="button" data-user-id="{{ member.id }}">Permanent Delete</button>
-                    </div>
-                </div>
+                    {% endfor %}
                 {% else %}
                 <div class="no-data-placeholder">
                     <p>No deactivated accounts found.</p>
                 </div>
-                {% endfor %}
+                {% endif %}
             </div>
         </div>
 

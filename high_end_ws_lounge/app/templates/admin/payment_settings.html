@@ -37,7 +37,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Account Name</label>
-                                <input type="text" name="account_name" class="form-control" value="{{ info.account_name if info else '' }}" placeholder="e.g. High End WS Lounge">
+                                <input type="text" name="account_name" class="form-control" value="{{ info.account_name if info else '' }}" placeholder="e.g. WS Lounge">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Account Number</label>
@@ -54,8 +54,10 @@
                             {% if info and info.qr_image %}
                             <div class="mb-3">
                                 <p class="mb-1"><strong>Current QR</strong></p>
-                                <img src="{{ url_for('static', filename='uploads/payment/' + info.qr_image) }}" alt="{{ method }} QR" class="img-fluid rounded" style="max-height: 220px;">
-                            </div>
+                                <img src="{{ url_for('static', filename='uploads/payment/' + info.qr_image) }}" 
+                                alt="{{ method }} QR" 
+                                class="img-fluid rounded border p-1 bg-white shadow-sm" 
+                                style="width: 180px; height: 180px; object-fit: contain; display: block;">                            </div>
                             {% endif %}
                             <button type="submit" class="btn btn-primary">Save {{ method }} Settings</button>
                         </form>

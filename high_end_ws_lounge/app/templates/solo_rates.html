@@ -15,11 +15,12 @@
         </div>
     </div>
 
+    <!-- Solo Status and Membership Info Cards -->
     <div class="solo-status-grid">
         <div class="status-card">
             <div class="status-card-header">
                 <h5>Solo Plan Status</h5>
-                {% if active_solo_plan %}
+                {% if active_solo_plan and active_solo_plan.is_active %}
                     <span class="badge badge-success">Active</span>
                 {% elif has_pending %}
                     <span class="badge badge-warning">Pending</span>
@@ -32,7 +33,7 @@
                     <p><strong>Plan:</strong> {{ active_solo_plan.plan_name }}</p>
                     <p><strong>Expiry:</strong> {{ active_solo_plan.expiry_date.strftime('%Y-%m-%d %I:%M %p') if active_solo_plan.expiry_date else 'Not set' }}</p>
                     <p><strong>Payment Method:</strong> {{ active_solo_plan.payment_method or 'N/A' }}</p>
-                    <p><strong>Status:</strong> {{ active_solo_plan.status.title() }}</p>
+                    <p><strong>Status:</strong> {{ (active_solo_plan.status or 'N/A')|title }}</p>
                 {% elif has_pending %}
                     <p>Your plan request is waiting for admin approval.</p>
                 {% else %}
@@ -53,8 +54,24 @@
             <div class="status-card-body">
                 {% if active_plan %}
                     <p><strong>Plan Name:</strong> {{ active_plan.plan }}</p>
-                    <p><strong>Started:</strong> {{ active_plan.start_date.strftime('%Y-%m-%d %I:%M %p') if active_plan.start_date else 'N/A' }}</p>
-                    <p><strong>Expiration:</strong> {{ expiration.strftime('%Y-%m-%d %I:%M %p') if expiration else 'N/A' }}</p>
+                    <p>
+                    <strong>Started:</strong> 
+                    {% if active_plan and active_plan.start_date %}
+                        {{ active_plan.start_date.strftime('%Y-%m-%d %I:%M %p') }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                    </p>
+                    <p>
+                    <strong>Expiration:</strong> 
+                    {% if expiration %}
+                        {{ expiration.strftime('%Y-%m-%d %I:%M %p') }}
+                    {% elif active_plan and active_plan.expiry_date %}
+                        {{ active_plan.expiry_date.strftime('%Y-%m-%d %I:%M %p') }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                    </p>
                     <p><strong>Remaining days:</strong> {{ remaining_days }}</p>
                     <p><strong>Countdown:</strong> <span id="membership-countdown" data-expiry="{{ expiration.isoformat() if expiration else '' }}"></span></p>
                 {% else %}
@@ -64,6 +81,7 @@
         </div>
     </div>
 
+    <!-- Rate Comparison Table -->
     <div class="plan-comparison-card">
         <div class="plan-comparison-header">
             <h4>Rate Comparison</h4>
@@ -97,6 +115,7 @@
         </div>
     </div>
 
+    <!-- Plan Cards Grid -->
     <div class="plan-cards-grid">
         {% for plan in plans %}
         <div class="plan-card">
@@ -124,6 +143,7 @@
         {% endfor %}
     </div>
 
+    <!-- Plan Summary Info -->
     <div class="plan-summary-card">
         <h4>Plan Summary</h4>
         {% if message %}
@@ -138,40 +158,55 @@
     </div>
 </div>
 
+<!-- Plan Purchase Modal -->
 <div class="modal-backdrop d-none" id="plan-selection-modal" aria-hidden="true">
     <div class="modal-card">
-        <button type="button" class="modal-close" id="plan-modal-close">×</button>
+        <button type="button" class="modal-close" id="plan-modal-close">&times;</button>
         <div class="modal-content-inner">
-            <h3 id="modal-plan-title">Confirm Plan</h3>
-            <p class="modal-price" id="modal-plan-price"></p>
-            <div class="modal-row">
-                <label class="modal-label">Payment Method</label>
-                <div class="modal-radio-group">
-                    <label><input type="radio" name="modal_payment_method" value="GCash"> GCash</label>
-                    <label><input type="radio" name="modal_payment_method" value="Maya"> Maya</label>
+            <form id="solo-plan-form" method="POST" enctype="multipart/form-data">
+                {% if csrf_token is defined and csrf_token %}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% endif %}
+                <input type="hidden" id="modal-plan-name-input" name="plan_name" value="">
+
+                <h3 id="modal-plan-title">Purchase Plan</h3>
+                <p class="modal-price" id="modal-plan-price"></p>
+                
+                <div class="modal-row">
+                    <label class="modal-label" style="text-transform: uppercase; font-weight: bold; font-size: 0.85rem; color: #2c3e50;">Payment Method</label>
+                    <div class="modal-radio-group">
+                        <label><input type="radio" name="modal_payment_method" value="GCash" required> GCash</label>
+                        <label><input type="radio" name="modal_payment_method" value="Maya"> Maya</label>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-payment-details d-none" id="modal-payment-details">
-                <div class="payment-info-line"><strong>Account Name:</strong> <span id="modal-account-name"></span></div>
-                <div class="payment-info-line"><strong>Account Number:</strong> <span id="modal-account-number"></span></div>
-                <div class="payment-info-line"><strong>Instructions:</strong> <span id="modal-instructions"></span></div>
-                <div class="modal-qr-wrap d-none" id="modal-qr-wrap">
-                    <img id="modal-qr-image" alt="Payment QR" class="modal-qr" src="">
+
+                <!-- Payment Details Container (Blue Card style) -->
+                <div class="modal-payment-details d-none" id="modal-payment-details">
+                    <div class="payment-info-line"><strong>Account Name:</strong> <span id="modal-account-name">WS Students & Professionals Lounge</span></div>
+                    <div class="payment-info-line"><strong>Account Number:</strong> <span id="modal-account-number">0999XXXXXXX</span></div>
+                    <div class="payment-info-line"><strong>Instructions:</strong> <span id="modal-instructions">Please make your payment using the details above and upload your payment receipt.</span></div>
+                    <div class="modal-qr-wrap d-none" id="modal-qr-wrap" style="text-align: center; margin-top: 10px;">
+                        <img id="modal-qr-image" alt="Payment QR" class="modal-qr" src="" style="max-width: 200px; border-radius: 8px; border: 1px solid #ccc;">
+                    </div>
                 </div>
-            </div>
-            <div class="modal-row">
-                <label class="modal-label" for="modal-receipt">Upload Receipt</label>
-                <input type="file" id="modal-receipt" accept="image/*,application/pdf">
-            </div>
-            <div class="modal-row modal-terms-row">
-                <input type="checkbox" id="modal-terms">
-                <label for="modal-terms">I agree to upload a valid receipt and follow payment instructions.</label>
-            </div>
-            <div class="modal-error" id="modal-error"></div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" id="modal-cancel">Cancel</button>
-                <button type="button" class="btn btn-primary" id="modal-submit">Proceed to Payment</button>
-            </div>
+
+                <div class="modal-row" style="margin-top: 15px;">
+                    <label class="modal-label" for="modal-receipt" style="text-transform: uppercase; font-weight: bold; font-size: 0.85rem; color: #2c3e50;">Upload Receipt</label>
+                    <input type="file" id="modal-receipt" name="receipt_image" accept="image/*, .jpg, .jpeg, .jpe, .png, .gif, .webp, application/pdf" required>
+                </div>
+
+                <div class="modal-row modal-terms-row" style="margin-top: 10px;">
+                    <input type="checkbox" id="modal-terms" required>
+                    <label for="modal-terms" style="font-size: 0.85rem; color: #333;">I agree to upload a valid receipt and follow payment instructions.</label>
+                </div>
+
+                <div class="modal-error" id="modal-error" style="color: #e74c3c; font-size: 0.85rem; font-weight: 600; margin-top: 8px;"></div>
+
+                <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" id="modal-cancel">CANCEL</button>
+                    <button type="submit" class="btn btn-primary" id="modal-submit" style="background-color: #1a4a75; color: #fff; font-weight: bold;">PROCEED TO PAYMENT</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
