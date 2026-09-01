@@ -1,0 +1,6 @@
+.venv/
+venv/
+high_end_ws_lounge/venv/
+__pycache__/
+*.pyc
+.pytest_cache/
