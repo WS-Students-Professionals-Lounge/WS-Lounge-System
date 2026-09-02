@@ -95,6 +95,10 @@ def register():
         if existing_user:
             flash("Email already registered. Please login or use a different email.", "danger")
             return redirect(url_for("main.index", show_register="true"))
+
+        if phone and User.query.filter_by(phone=phone).first():
+            flash("Phone number already registered. Please use a different phone number.", "danger")
+            return redirect(url_for("main.index", show_register="true"))
         
         try:
             user = User(name=name, email=email, phone=phone or None)
@@ -104,7 +108,10 @@ def register():
         except Exception as e:
             print("DEBUG REGISTRATION ERROR:", repr(e))
             db.session.rollback()
-            flash("Registration failed. Please try again with a different email.", "danger")
+            if current_app.debug or current_app.testing:
+                flash(f"Registration failed: {str(e)}", "danger")
+            else:
+                flash("Registration failed. Please try again.", "danger")
             return redirect(url_for("main.index", show_register="true"))
         
         # FIX: Dulaon ang automatic login! Force user to manually log in.
