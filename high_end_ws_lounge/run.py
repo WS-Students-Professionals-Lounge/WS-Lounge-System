@@ -143,6 +143,8 @@ def create_app(config_class=Config):
             inspector = inspect(db.engine)
             if not inspector.has_table("users"):
                 return
+            if db.engine.dialect.name != "mysql":
+                return
 
             try:
                 zero_id_count = db.session.execute(text("SELECT COUNT(*) FROM users WHERE id = 0")).scalar()
