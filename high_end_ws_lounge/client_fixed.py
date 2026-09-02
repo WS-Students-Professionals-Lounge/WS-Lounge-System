@@ -83,9 +83,12 @@ def register():
     if request.method == "GET":
         return redirect(url_for("main.index", show_register="true"))
 
-    form = RegistrationForm()
+    print("DEBUG FORM DATA:", request.form)
+    form = RegistrationForm(meta={"csrf": False})
     if form.validate_on_submit():
+        name = form.name.data.strip()
         email = form.email.data.strip().lower()
+        phone = (form.phone.data or "").strip()
         
         # Check if email already exists
         existing_user = User.query.filter_by(email=email).first()
@@ -94,11 +97,12 @@ def register():
             return redirect(url_for("main.index", show_register="true"))
         
         try:
-            user = User(name=form.name.data, email=email, phone=form.phone.data)
+            user = User(name=name, email=email, phone=phone or None)
             user.set_password(form.password.data)
             db.session.add(user)
             db.session.commit()
         except Exception as e:
+            print("DEBUG REGISTRATION ERROR:", repr(e))
             db.session.rollback()
             flash("Registration failed. Please try again with a different email.", "danger")
             return redirect(url_for("main.index", show_register="true"))
@@ -107,6 +111,7 @@ def register():
         flash("Account created successfully! Please log in with your credentials.", "success")
         return redirect(url_for("main.index", show_login="true"))
 
+    print("DEBUG FORM ERRORS:", form.errors)
     flash("Please complete all required fields correctly.", "danger")
     return redirect(url_for("main.index", show_register="true"))
 

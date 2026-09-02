@@ -220,19 +220,22 @@
             {% endif %}
         {% endwith %}
 
-        <form method="POST" action="{{ url_for('auth.register') }}" class="modal-form">
+        <form method="POST" action="{{ url_for('auth.register') }}" class="modal-form" novalidate>
             {{ register_form.hidden_tag() }}
             <div class="input-group">
                 <label>Name</label>
-                {{ register_form.name(placeholder="Enter your full name") }}
+                {{ register_form.name(placeholder="Enter your full name", autocomplete="name", required=true) }}
+                {% for error in register_form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             </div>
             <div class="input-group">
                 <label>Email</label>
-                {{ register_form.email(placeholder="Enter your email") }}
+                {{ register_form.email(placeholder="Enter your email", autocomplete="email", required=true) }}
+                {% for error in register_form.email.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             </div>
             <div class="input-group">
                 <label>Phone</label>
-                {{ register_form.phone(placeholder="Enter your phone number") }}
+                {{ register_form.phone(placeholder="Enter your phone number", autocomplete="tel") }}
+                {% for error in register_form.phone.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             </div>
 
            <!-- REGISTER MODAL PASSWORD FIELD -->
@@ -240,7 +243,7 @@
 <div class="input-group">
     <label>Password</label>
     <div class="password-wrapper" style="position: relative; width: 100%;">
-        {{ register_form.password(id="reg_password", class="form-control", placeholder="Create a password") }}
+        {{ register_form.password(id="reg_password", class="form-control", placeholder="Create a password", autocomplete="new-password", required=true) }}
         <span class="toggle-password-btn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d; z-index: 10;">
             <i class="fa-solid fa-eye"></i>
         </span>
@@ -253,13 +256,14 @@
         </div>
         <div id="reg-strength-text" style="font-size: 0.75rem; font-weight: 600; margin-top: 4px;"></div>
     </div>
+    {% for error in register_form.password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
 </div>
 
 <!-- REGISTER CONFIRM PASSWORD FIELD -->
 <div class="input-group" style="margin-top: 10px;">
     <label>Confirm Password</label>
     <div class="password-wrapper" style="position: relative; width: 100%;">
-        {{ register_form.password2(id="reg_confirm_password", class="form-control", placeholder="Confirm your password") }}
+        {{ register_form.password2(id="reg_confirm_password", class="form-control", placeholder="Confirm your password", autocomplete="new-password", required=true) }}
         <span class="toggle-password-btn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d; z-index: 10;">
             <i class="fa-solid fa-eye"></i>
         </span>
@@ -267,6 +271,7 @@
     
     <!-- MATCH INDICATOR TEXT -->
     <div id="reg-match-text" style="font-size: 0.75rem; font-weight: 600; margin-top: 4px;"></div>
+    {% for error in register_form.password2.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
 </div>
             <button type="submit" class="btn-login-submit">Register</button>
         </form>
