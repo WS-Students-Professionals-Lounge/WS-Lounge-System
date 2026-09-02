@@ -18,3 +18,4 @@ mysql-connector-python==9.0.0
 gunicorn==22.0.0
 pytest==8.2.1
 black==24.4.2
+pytz
