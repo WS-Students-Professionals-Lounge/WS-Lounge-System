@@ -40,7 +40,8 @@ from wtforms.validators import (
     DataRequired,
 )
 
-load_dotenv()
+if os.environ.get("VERCEL") != "1":
+    load_dotenv()
 
 # Config
 
@@ -48,30 +49,36 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
 def resolve_database_uri():
-    env_uri = os.environ.get("SQLALCHEMY_DATABASE_URI")
-    preferred_local_uri = f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
+    database_uri = (
+        os.environ.get("SQLALCHEMY_DATABASE_URI")
+        or os.environ.get("DATABASE_URL")
+    )
 
-    if not env_uri:
-        return preferred_local_uri
+    if not database_uri:
+        raise RuntimeError(
+            "Missing SQLALCHEMY_DATABASE_URI or DATABASE_URL. "
+            "Configure a hosted MySQL or PostgreSQL database before starting the app."
+        )
 
-    if env_uri.startswith("sqlite"):
-        return env_uri
+    if database_uri.startswith("sqlite"):
+        raise RuntimeError(
+            "SQLite is not supported by this deployment configuration. "
+            "Use SQLALCHEMY_DATABASE_URI or DATABASE_URL with a hosted database."
+        )
 
-    if env_uri.startswith("mysql") or env_uri.startswith("postgres"):
+    if database_uri.startswith("mysql") or database_uri.startswith("postgres"):
         try:
-            engine = create_engine(env_uri)
+            engine = create_engine(database_uri)
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            return env_uri
+            return database_uri
         except Exception as exc:
-            print(
-                "Warning: configured SQLALCHEMY_DATABASE_URI is not reachable; "
-                "falling back to local SQLite."
-            )
-            print(f"Database error: {exc}")
-            return preferred_local_uri
+            raise RuntimeError(
+                "The configured database URI is unreachable. "
+                "Check SQLALCHEMY_DATABASE_URI/DATABASE_URL and database network access."
+            ) from exc
 
-    return env_uri
+    return database_uri
 
 
 class Config:
