@@ -77,13 +77,14 @@ def login():
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
+    print("FORM INPUTS:", dict(request.form))
+
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
 
     if request.method == "GET":
         return redirect(url_for("main.index", show_register="true"))
 
-    print("DEBUG FORM DATA:", request.form)
     form = RegistrationForm(meta={"csrf": False})
     if form.validate_on_submit():
         name = form.name.data.strip()
